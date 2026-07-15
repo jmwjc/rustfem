@@ -1,0 +1,19 @@
+[package]
+name = "rustfem"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dhat = "0.3.3"
+faer = "0.24.4"
+nalgebra = "0.34.2"
+
+[profile.release]
+debug = 1
+
+[features]
+default = ["sparse"]
+dhat-heap = []    # if you are doing heap profiling
+dhat-ad-hoc = []  # if you are doing ad hoc profiling
+std = []
+sparse = []
