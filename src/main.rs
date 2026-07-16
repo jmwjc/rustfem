@@ -2,11 +2,11 @@
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 use faer::prelude::*;
-#[cfg(feature = "std")]
-use faer::{Side};
 #[cfg(feature = "sparse")]
 use faer::sparse::*;
+use faer::{Side};
 
+mod problem;
 
 fn main() {
     #[cfg(feature = "dhat-heap")]
@@ -47,7 +47,7 @@ fn main() {
         let x2 = x[i+1];
         let dl = x2-x1;
         triplets.push(Triplet::new(i, i, 1.0 / dl));
-        triplets.push(Triplet::new(i, i+1, -1.0 / dl));
+        // triplets.push(Triplet::new(i, i+1, -1.0 / dl));
         triplets.push(Triplet::new(i+1, i, -1.0 / dl));
         triplets.push(Triplet::new(i+1, i+1, 1.0 / dl));
     }
@@ -56,9 +56,12 @@ fn main() {
 
     let k = SparseColMat::<usize, f64>::try_new_from_triplets(np, np, &triplets).unwrap();
     f[np-1] += 1.0;
-    let lu = k.sp_lu().unwrap();
 
-    let d = lu.solve(&f);
+    let llt = k.sp_cholesky(Side::Lower).unwrap();
+    let d = llt.solve(&f);
+
+    // let lu = k.sp_lu().unwrap();
+    // let d = lu.solve(&f);
     println!("{:?}", d)
     }
 }
