@@ -6,7 +6,10 @@ use faer::prelude::*;
 use faer::sparse::*;
 use faer::{Side};
 
+mod approximation;
+mod operations;
 mod problem;
+mod element;
 
 fn main() {
     #[cfg(feature = "dhat-heap")]
@@ -15,15 +18,16 @@ fn main() {
     let np: usize = 11;
     let ne: usize = np-1;
     let l: f64 = 1.0;
-    let x = Col::<f64>::from_fn(np, |i| i as f64 * l / (np-1) as f64);
+    let elements: Vec<element::Seg2> = (0..ne).map(|i| element::Seg2::new(approximation::Node { id: i, x: l/ne as f64 * i as f64, y: 0.0, z: 0.0 }, approximation::Node { id: i+1, x: l/ne as f64 * (i+1) as f64, y: 0.0, z: 0.0 })).collect();
+    // let x = Col::<f64>::from_fn(np, |i| i as f64 * l / (np-1) as f64);
     let mut f = Col::<f64>::zeros(np);
 
     #[cfg(feature = "std")]
     {
     let mut k = Mat::<f64>::zeros(np,np);
     for i in 0..ne {
-        let x1 = x[i];
-        let x2 = x[i+1];
+        let x1 = nodes[i].x;
+        let x2 = nodes[i+1].x;
         let dl = x2-x1;
         k[(i,i)] += 1.0/dl;
         k[(i,i+1)] -= 1.0/dl;
@@ -43,9 +47,10 @@ fn main() {
     {
     let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::new();
     for i in 0..ne {
-        let x1 = x[i];
-        let x2 = x[i+1];
+        let x1 = elements[i].dofs[0].x;
+        let x2 = elements[i].dofs[1].x;
         let dl = x2-x1;
+        // let id = 
         triplets.push(Triplet::new(i, i, 1.0 / dl));
         // triplets.push(Triplet::new(i, i+1, -1.0 / dl));
         triplets.push(Triplet::new(i+1, i, -1.0 / dl));

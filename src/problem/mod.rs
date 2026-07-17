@@ -1,2 +1,2 @@
 
-mod truss1D;
+mod truss1d;
