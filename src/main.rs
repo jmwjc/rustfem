@@ -16,9 +16,12 @@ struct Seg2<const D: usize> {
     nodes: [Node<D>; 2]
 }
 
-impl<const D:usize> Approximation<D, 2> for Seg2<D> {
-    fn id(&self): [usize; 2] { std::array::from_fn(|i| self.nodes[i].id)}
-    fn shape(&self, ξ: [f64; D]) -> [f64; 2] {
+impl<const D:usize> Element<D, 2, 1> for Seg2<D> {
+    fn id(&self) -> [usize; 2] {
+        std::array::from_fn(|i| self.nodes[i].id)
+    }
+    fn shape(&self, parametric_coordinates: [f64; 1]) -> [f64; 2] {
+        let ξ = parametric_coordinates[0];
         [0.5*(1.0-ξ), 0.5*(1.0+ξ)]
     }
 }
@@ -32,14 +35,12 @@ struct TrussStiffness {
     cross_sectional_area: f64,
 }
 
-trait Approximation<const D: usize, const P: usize> {
-    fn id(&self) -> [usize; P];
-    fn shape(&self, ξ: [f64; D]) -> [f64; P]; 
+trait Element<const D: usize, const N: usize, const P: usize> {
+    fn id(&self) -> [usize; N];
+    fn shape(&self, ξ: [f64; P]) -> [f64; N]; 
 }
 
-trait Variable: IntoIterator {
-
-}
+trait Variable: IntoIterator {}
 
 impl Variable for Vec<Seg2<1>> {}
 
@@ -47,12 +48,15 @@ trait BilinearForm {
     fn assemble<T>(v: T) -> Vec<Triplet<usize, usize, f64>>
     where 
         T: Variable,
-        // T::Item: Element,
+        T::Item: Element<,
     ;
 }
 
 impl BilinearForm for TrussStiffness {
-    fn assemble<T: Variable>(v: T) -> Vec<Triplet<usize, usize, f64>> {
+    fn assemble<T>(v: T) -> Vec<Triplet<usize, usize, f64>> where
+        T: Variable,
+        T::Item: Element<,
+    {
         let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::new();
         for elm in v {
             let id = elm.id()
