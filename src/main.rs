@@ -1,123 +1,39 @@
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
+
+mod node;
+mod element;
+mod operation;
+mod quadrature;
+
+use std::time::Instant;
 use faer::prelude::*;
-#[cfg(feature = "sparse")]
 use faer::sparse::*;
 use faer::{Side};
 
-
-struct Node<const D: usize> {
-    id: usize,
-    coordinates: [f64; D],
-}
-
-struct Seg2<const D: usize> {
-    nodes: [Node<D>; 2]
-}
-
-impl<const D:usize> Element<D, 2, 1> for Seg2<D> {
-    fn id(&self) -> [usize; 2] {
-        std::array::from_fn(|i| self.nodes[i].id)
-    }
-    fn shape(&self, parametric_coordinates: [f64; 1]) -> [f64; 2] {
-        let ξ = parametric_coordinates[0];
-        [0.5*(1.0-ξ), 0.5*(1.0+ξ)]
-    }
-}
-
-struct Poi1<const D: usize> {
-    nodes: Node<D>
-}
-
-struct TrussStiffness {
-    young_modulus: f64,
-    cross_sectional_area: f64,
-}
-
-trait Element<const D: usize, const N: usize, const P: usize> {
-    fn id(&self) -> [usize; N];
-    fn shape(&self, ξ: [f64; P]) -> [f64; N]; 
-}
-
-trait Variable: IntoIterator {}
-
-impl Variable for Vec<Seg2<1>> {}
-
-trait BilinearForm {
-    fn assemble<T>(v: T) -> Vec<Triplet<usize, usize, f64>>
-    where 
-        T: Variable,
-        T::Item: Element<,
-    ;
-}
-
-impl BilinearForm for TrussStiffness {
-    fn assemble<T>(v: T) -> Vec<Triplet<usize, usize, f64>> where
-        T: Variable,
-        T::Item: Element<,
-    {
-        let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::new();
-        for elm in v {
-            let id = elm.id()
-        }
-        triplets
-    }
-}
-
-trait LinearForm {
-    fn assemble<T: Variable>(v: T) -> Vec<(usize, f64)>;
-}
+use crate::node::Node;
+use crate::element::seg2::Seg2;
+use crate::operation::truss::Truss;
+use crate::operation::BilinearForm;
+use crate::quadrature::gauss_segment::GaussSeg1;
 
 fn main() {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
-    let np: usize = 11;
-    let ne: usize = np-1;
-    let l: f64 = 1.0;
-    let elements: Vec<element::Seg2> = (0..ne).map(|i| element::Seg2::new(approximation::Node { id: i, x: l/ne as f64 * i as f64, y: 0.0, z: 0.0 }, approximation::Node { id: i+1, x: l/ne as f64 * (i+1) as f64, y: 0.0, z: 0.0 })).collect();
-    // let x = Col::<f64>::from_fn(np, |i| i as f64 * l / (np-1) as f64);
-    let mut f = Col::<f64>::zeros(np);
+    let start = Instant::now();
+    let np = 11;
+    let ne = np-1;
+    let u:Vec<Seg2<1>> = (0..ne).map(|i|Seg2::new(Node::new(i, [i as f64 * 1.0/ne as f64]), Node::new(i+1, [(i+1) as f64 * 1.0/ne as f64]))).collect();
+    let a = Truss::new(1.0, 1.0, 1.0);
+    let mut triplets = a.assemble(u, GaussSeg1);
 
-    #[cfg(feature = "std")]
-    {
-    let mut k = Mat::<f64>::zeros(np,np);
-    for i in 0..ne {
-        let x1 = nodes[i].x;
-        let x2 = nodes[i+1].x;
-        let dl = x2-x1;
-        k[(i,i)] += 1.0/dl;
-        k[(i,i+1)] -= 1.0/dl;
-        k[(i+1,i)] -= 1.0/dl;
-        k[(i+1,i+1)] += 1.0/dl;
-    }
-    let alpha: f64 = 1e7;
-    k[(1,1)] += alpha;
-    f[np-1] += 1.0;
-
-    let llt = k.llt(Side::Lower).unwrap();
-
-    let d = llt.solve(&f);
-    println!("{:?}", d)
-    }
-    #[cfg(feature = "sparse")]
-    {
-    let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::new();
-    for i in 0..ne {
-        let x1 = elements[i].dofs[0].x;
-        let x2 = elements[i].dofs[1].x;
-        let dl = x2-x1;
-        // let id = 
-        triplets.push(Triplet::new(i, i, 1.0 / dl));
-        // triplets.push(Triplet::new(i, i+1, -1.0 / dl));
-        triplets.push(Triplet::new(i+1, i, -1.0 / dl));
-        triplets.push(Triplet::new(i+1, i+1, 1.0 / dl));
-    }
     let alpha: f64 = 1e7;
     triplets.push(Triplet::new(0, 0, alpha));
 
     let k = SparseColMat::<usize, f64>::try_new_from_triplets(np, np, &triplets).unwrap();
+    let mut f = Col::<f64>::zeros(np);
     f[np-1] += 1.0;
 
     let llt = k.sp_cholesky(Side::Lower).unwrap();
@@ -125,6 +41,10 @@ fn main() {
 
     // let lu = k.sp_lu().unwrap();
     // let d = lu.solve(&f);
-    println!("{:?}", d)
-    }
+    println!("{:?}", k);
+    println!("{:?}", f);
+    println!("{:?}", d);
+    let duration = start.elapsed();
+    println!("Time elapsed: {:?}", duration);
+    // }
 }

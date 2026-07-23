@@ -1,33 +1,12 @@
-use std::cmp::Eq;
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 
-use crate::variable::Variable;
-
-#[derive(Debug, Copy, Clone)]
-pub struct Node {
+pub struct Node<const D: usize> {
     pub id: usize,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub coordinates: [f64; D],
 }
 
-impl PartialEq for Node {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-impl Eq for Node {}
-
-impl Hash for Node {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
+impl<const D: usize> Node<D> {
+    pub fn new(id: usize, coordinates: [f64; D]) -> Self {
+        Node { id, coordinates }
     }
 }
 
-
-pub struct BoundaryCondition {
-    pub node: Node,
-    pub variable: Variable,
-    pub value: f64,
-}
