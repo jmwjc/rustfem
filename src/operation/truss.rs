@@ -18,7 +18,7 @@ impl Truss {
 }
 
 impl BilinearForm<1> for Truss {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: T, quadrature: S) -> Vec<Triplet<usize, usize, f64>> where
+    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, quadrature: S) -> Vec<Triplet<usize, usize, f64>> where
         T: Variable<P, N>,
         T::Item: Element<P, N>,
         S: Quadrature<P, G>,
@@ -27,7 +27,7 @@ impl BilinearForm<1> for Truss {
         let ea = self.young_modulus*self.cross_sectional_area;
         let ξ = quadrature.coordinates();
         let w = quadrature.weights();
-        for elm in v {
+        for elm in v.iter() {
             let id = elm.id();
             for g in 0..G {
                 let ξg = ξ[g];

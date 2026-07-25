@@ -4,8 +4,26 @@ use faer::sparse::Triplet;
 use crate::element::Element;
 use crate::quadrature::Quadrature;
 
-pub trait Variable <const P: usize, const N: usize>: IntoIterator where Self::Item: Element<P, N> {}
-impl<T, const P: usize, const N: usize> Variable<P, N> for Vec<T> where T: Element<P, N> {}
+pub trait Variable <const P: usize, const N: usize> {
+    type Item: Element<P, N>;
+    fn iter(&self) -> impl Iterator<Item = &Self::Item>;
+}
+impl<T, const P: usize, const N: usize> Variable<P, N> for &[T]
+where
+    T: Element<P, N>,
+{
+    type Item = T;
+    
+    fn iter(&self) -> impl Iterator<Item = &T> {
+        <[T]>::iter(self)
+    }
+}
+impl<T, const P: usize, const N: usize> Variable<P, N> for Vec<T> where T: Element<P, N> {
+    type Item = T;
+    fn iter(&self) -> impl Iterator<Item = &T> {
+        self.as_slice().iter()
+    }
+}
 
 trait LinearForm {
     fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: T, quadrature: S) -> Vec<(usize, f64)>
@@ -17,7 +35,7 @@ trait LinearForm {
 }
 
 pub trait BilinearForm<const D: usize> {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: T, quadrature: S) -> Vec<Triplet<usize, usize, f64>>
+    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, quadrature: S) -> Vec<Triplet<usize, usize, f64>>
     where 
         T: Variable<P, N>,
         T::Item: Element<P, N>,

@@ -27,7 +27,7 @@ fn main() {
     let ne = np-1;
     let u:Vec<Seg2<1>> = (0..ne).map(|i|Seg2::new(Node::new(i, [i as f64 * 1.0/ne as f64]), Node::new(i+1, [(i+1) as f64 * 1.0/ne as f64]))).collect();
     let a = Truss::new(1.0, 1.0, 1.0);
-    let mut triplets = a.assemble(u, GaussSeg1);
+    let mut triplets = a.assemble(&u, GaussSeg1);
 
     let alpha: f64 = 1e7;
     triplets.push(Triplet::new(0, 0, alpha));
