@@ -16,7 +16,7 @@ use crate::node::Node;
 use crate::element::seg2::Seg2;
 use crate::operation::truss::Truss;
 use crate::operation::BilinearForm;
-use crate::quadrature::gauss_segment::GaussSeg1;
+use crate::quadrature::gauss_segment::GaussSeg2;
 
 fn main() {
     #[cfg(feature = "dhat-heap")]
@@ -26,8 +26,8 @@ fn main() {
     let np = 11;
     let ne = np-1;
     let u:Vec<Seg2<1>> = (0..ne).map(|i|Seg2::new(Node::new(i, [i as f64 * 1.0/ne as f64]), Node::new(i+1, [(i+1) as f64 * 1.0/ne as f64]))).collect();
-    let a = Truss::new(1.0, 1.0, 1.0);
-    let mut triplets = a.assemble(&u, GaussSeg1);
+    let a = Truss::new(1.0, 1.0);
+    let mut triplets = a.assemble(&u, GaussSeg2);
 
     let alpha: f64 = 1e7;
     triplets.push(Triplet::new(0, 0, alpha));

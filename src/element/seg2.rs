@@ -1,3 +1,4 @@
+
 use crate::node::Node;
 use crate::element::Element;
 
@@ -11,7 +12,7 @@ impl<const D: usize> Seg2<D>  {
     }
 }
 
-impl<const D:usize> Element<1,2> for Seg2<D> {
+impl<const D: usize> Element<D, 1,2> for Seg2<D> {
     fn id(&self) -> [usize; 2] {
         [self.nodes[0].id, self.nodes[1].id]
     }
@@ -19,11 +20,22 @@ impl<const D:usize> Element<1,2> for Seg2<D> {
         let ξ = parametric_coordinates[0];
         [0.5*(1.0-ξ), 0.5*(1.0+ξ)]
     }
-    fn jacobe(&self, _parametric_coordinates: [f64; 1]) -> f64 {
-        (0..D).map(|i|(self.nodes[0].coordinates[i]-self.nodes[1].coordinates[i]).powi(2)).sum::<f64>().sqrt()*0.5
-    }
     fn derivative_shape(&self, parametric_coordinates: [f64; 1]) -> [f64; 2] {
         let l = 2.0*self.jacobe(parametric_coordinates);
         [-1.0/l, 1.0/l]
+    }
+    fn vertices_coordinates(&self) -> [[f64; D]; 2] {
+        [self.nodes[0].coordinates, self.nodes[1].coordinates]
+    }
+    fn coordinates(&self, parametric_coordinates: [f64; 1]) -> [f64; D] {
+        let vertics_coordinates = self.vertices_coordinates();
+        let shape = self.shape(parametric_coordinates);
+        std::array::from_fn(|i|vertics_coordinates[0][i]*shape[0]+vertics_coordinates[1][i]*shape[1])
+    }
+    fn jacobe(&self, _parametric_coordinates: [f64; 1]) -> f64 {
+        (0..D).map(|i|(self.nodes[0].coordinates[i]-self.nodes[1].coordinates[i]).powi(2)).sum::<f64>().sqrt()*0.5
+    }
+    fn jacobe_mat(&self, _parametric_coordinates: [f64; 1]) -> [[f64; 1]; D] {
+        std::array::from_fn(|i|[0.5*(self.nodes[1].coordinates[i]-self.nodes[0].coordinates[i])])
     }
 }

@@ -8,25 +8,25 @@ use crate::quadrature::Quadrature;
 pub struct Truss {
     young_modulus: f64,
     cross_sectional_area: f64,
-    moment_of_inertia: f64,
 }
 
+#[allow(non_snake_case)]
 impl Truss {
-    pub fn new(e:f64, a:f64, i: f64) -> Self {
-        Truss { young_modulus: e, cross_sectional_area: a, moment_of_inertia: i }
+    pub fn new(E:f64, A:f64) -> Self {
+        Truss { young_modulus: E, cross_sectional_area: A }
     }
 }
 
 impl BilinearForm<1> for Truss {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, quadrature: S) -> Vec<Triplet<usize, usize, f64>> where
-        T: Variable<P, N>,
-        T::Item: Element<P, N>,
+    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, _quadrature: S) -> Vec<Triplet<usize, usize, f64>> where
+        T: Variable<1, P, N>,
+        T::Item: Element<1, P, N>,
         S: Quadrature<P, G>,
     {
         let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::with_capacity(N*(N+1)/2*G);
         let ea = self.young_modulus*self.cross_sectional_area;
-        let ξ = quadrature.coordinates();
-        let w = quadrature.weights();
+        let ξ = S::coordinates();
+        let w = S::weights();
         for elm in v.iter() {
             let id = elm.id();
             for g in 0..G {

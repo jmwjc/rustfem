@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 dhat = "0.3.3"
 faer = "0.24.4"
-nalgebra = "0.34.2"
 
 [profile.release]
 debug = 1
