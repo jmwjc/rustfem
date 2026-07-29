@@ -1,9 +1,10 @@
 use faer::sparse::Triplet;
 use crate::element::Element;
+use crate::element::IntegrationScheme;
 use crate::operation::Variable;
 use crate::operation::LinearForm;
 use crate::operation::BilinearForm;
-use crate::quadrature::Quadrature;
+// use crate::quadrature::Quadrature;
 
 pub struct Truss {
     young_modulus: f64,
@@ -18,15 +19,14 @@ impl Truss {
 }
 
 impl BilinearForm<1> for Truss {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, _quadrature: S) -> Vec<Triplet<usize, usize, f64>> where
+    fn assemble<T, const P: usize, const N: usize, const G: usize>(&self, v: &T) -> Vec<Triplet<usize, usize, f64>> where
         T: Variable<1, P, N>,
-        T::Item: Element<1, P, N>,
-        S: Quadrature<P, G>,
+        T::Item: Element<1, P, N>+IntegrationScheme<P, G>,
     {
         let mut triplets: Vec<Triplet<usize, usize, f64>> = Vec::with_capacity(N*(N+1)/2*G);
         let ea = self.young_modulus*self.cross_sectional_area;
-        let ξ = S::coordinates();
-        let w = S::weights();
+        let ξ = T::Item::points();
+        let w = T::Item::weights();
         for elm in v.iter() {
             let id = elm.id();
             for g in 0..G {

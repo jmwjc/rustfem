@@ -1,6 +1,6 @@
 
 use crate::node::Node;
-use crate::element::Element;
+use crate::element::{Element, FullIntegration, ReducedIntegration};
 
 pub struct Seg2<const D: usize> {
     nodes: [Node<D>; 2]
@@ -11,6 +11,9 @@ impl<const D: usize> Seg2<D>  {
         Seg2 {nodes: [n1, n2]}
     }
 }
+
+impl<const D: usize> ReducedIntegration<1, 1> for Seg2<D> {}
+impl<const D: usize> FullIntegration<1, 2> for Seg2<D> {}
 
 impl<const D: usize> Element<D, 1,2> for Seg2<D> {
     fn id(&self) -> [usize; 2] {

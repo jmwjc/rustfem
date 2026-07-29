@@ -1,8 +1,7 @@
 pub mod truss;
 
 use faer::sparse::Triplet;
-use crate::element::Element;
-use crate::quadrature::Quadrature;
+use crate::element::{Element, FullIntegration, ReducedIntegration};
 
 pub trait Variable <const D: usize, const P: usize, const N: usize> {
     type Item: Element<D, P, N>;
@@ -26,19 +25,17 @@ impl<T, const D: usize, const P: usize, const N: usize> Variable<D, P, N> for Ve
 }
 
 trait LinearForm<const D: usize> {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: T, quadrature: S) -> Vec<(usize, f64)>
+    fn assemble<T, const P: usize, const N: usize, const G: usize>(&self, v: T) -> Vec<(usize, f64)>
     where
         T: Variable<D, P, N>,
-        T::Item: Element<D, P, N>,
-        S: Quadrature<P, G>,
+        T::Item: Element<D, P, N>+FullIntegration<P, G>,
     ;
 }
 
 pub trait BilinearForm<const D: usize> {
-    fn assemble<T, S, const P: usize, const N: usize, const G: usize>(&self, v: &T, quadrature: S) -> Vec<Triplet<usize, usize, f64>>
+    fn assemble<T, const P: usize, const N: usize, const G: usize>(&self, v: &T) -> Vec<Triplet<usize, usize, f64>>
     where 
         T: Variable<D, P, N>,
-        T::Item: Element<D, P, N>,
-        S: Quadrature<P, G>,
+        T::Item: Element<D, P, N>+FullIntegration<P, G>,
     ;
 }
