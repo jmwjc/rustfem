@@ -4,6 +4,7 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 mod node;
 mod element;
+mod io;
 mod operation;
 
 use std::time::Instant;
@@ -11,7 +12,6 @@ use faer::prelude::*;
 use faer::sparse::*;
 use faer::{Side};
 
-use crate::element::FullIntegration;
 use crate::node::Node;
 use crate::element::seg2::Seg2;
 use crate::operation::truss::Truss;

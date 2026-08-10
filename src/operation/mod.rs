@@ -32,6 +32,7 @@ trait LinearForm<const D: usize> {
     ;
 }
 
+
 pub trait BilinearForm<const D: usize> {
     fn assemble<T, const P: usize, const N: usize, const G: usize>(&self, v: &T) -> Vec<Triplet<usize, usize, f64>>
     where 

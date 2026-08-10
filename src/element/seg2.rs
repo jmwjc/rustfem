@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+
 use crate::node::Node;
 use crate::element::{Element, FullIntegration, ReducedIntegration};
 
@@ -15,7 +17,18 @@ impl<const D: usize> Seg2<D>  {
 impl<const D: usize> ReducedIntegration<1, 1> for Seg2<D> {}
 impl<const D: usize> FullIntegration<1, 2> for Seg2<D> {}
 
-impl<const D: usize> Element<D, 1,2> for Seg2<D> {
+impl<const D: usize> Element<D, 1, 2> for Seg2<D> {
+    const GMSH_ELEMENT_TYPE: i32 = 1;
+
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self> {
+        if node_ids.len() < 2 {
+            return None;
+        }
+        let n0 = nodes.get(&node_ids[0])?.clone();
+        let n1 = nodes.get(&node_ids[1])?.clone();
+        Some(Seg2::new(n0, n1))
+    }
+
     fn id(&self) -> [usize; 2] {
         [self.nodes[0].id, self.nodes[1].id]
     }

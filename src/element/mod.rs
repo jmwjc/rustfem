@@ -1,11 +1,22 @@
 
+use std::collections::HashMap;
+
 pub mod poi1;
 pub mod seg2;
 
 pub trait Element<const D: usize, const P: usize, const N: usize> {
+    /// GMSH element type code (e.g. 1 = 2-node line, 15 = 1-node point).
+    const GMSH_ELEMENT_TYPE: i32;
+
+    /// Try to construct an element from a slice of global node ids and a
+    /// node lookup table.
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, crate::node::Node<D>>) -> Option<Self>
+    where
+        Self: Sized;
+
     fn id(&self) -> [usize; N];
-    fn shape(&self, parametric_coordinates: [f64; P]) -> [f64; N]; 
-    fn derivative_shape(&self, parametric_coordinates: [f64; P]) -> [f64; N]; 
+    fn shape(&self, parametric_coordinates: [f64; P]) -> [f64; N];
+    fn derivative_shape(&self, parametric_coordinates: [f64; P]) -> [f64; N];
 
     fn vertices_coordinates(&self) -> [[f64; D]; N];
     fn coordinates(&self, parametric_coordinates: [f64; P]) -> [f64; D];

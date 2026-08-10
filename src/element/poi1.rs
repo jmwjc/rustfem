@@ -1,4 +1,11 @@
 use crate::node::Node;
+
 pub struct Poi1<const D: usize> {
-    nodes: Node<D>
+    pub nodes: Node<D>,
+}
+
+impl<const D: usize> Poi1<D> {
+    pub fn new(node: Node<D>) -> Self {
+        Poi1 { nodes: node }
+    }
 }
