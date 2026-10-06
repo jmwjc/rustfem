@@ -1,19 +1,8 @@
-
-use std::collections::HashMap;
-
 pub mod poi1;
 pub mod seg2;
+pub mod tri3;
 
 pub trait Element<const D: usize, const P: usize, const N: usize> {
-    /// GMSH element type code (e.g. 1 = 2-node line, 15 = 1-node point).
-    const GMSH_ELEMENT_TYPE: i32;
-
-    /// Try to construct an element from a slice of global node ids and a
-    /// node lookup table.
-    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, crate::node::Node<D>>) -> Option<Self>
-    where
-        Self: Sized;
-
     fn id(&self) -> [usize; N];
     fn shape(&self, parametric_coordinates: [f64; P]) -> [f64; N];
     fn derivative_shape(&self, parametric_coordinates: [f64; P]) -> [f64; N];
@@ -35,27 +24,18 @@ pub trait ReducedIntegration<const P: usize, const G: usize>: IntegrationScheme<
 
 impl<T> IntegrationScheme<1, 2> for T {
     fn points() -> [[f64; 1]; 2] {
-        [
-            [-0.5773502691896257],
-            [ 0.5773502691896257],
-        ]
+        [[-0.5773502691896257], [0.5773502691896257]]
     }
     fn weights() -> [f64; 2] {
-        [
-            1.0, 1.0,
-        ]
+        [1.0, 1.0]
     }
 }
 
 impl<T> IntegrationScheme<1, 1> for T {
     fn points() -> [[f64; 1]; 1] {
-        [
-            [0.0],
-        ]
+        [[0.0]]
     }
     fn weights() -> [f64; 1] {
-        [
-            2.0,
-        ]
+        [2.0]
     }
 }

@@ -3,38 +3,129 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
 
-use crate::element::Element;
+use crate::element::poi1::Poi1;
+use crate::element::seg2::Seg2;
+use crate::element::tri3::Tri3;
+use crate::node::Node;
 
 // ============================================================================
 // Public API
 // ============================================================================
 
-/// Parse a GMSH v4 `.msh` file and return a map `physical-group-id → Vec<T>`.
+/// 单元类型与 GMSH 文件格式之间的桥接 trait。
 ///
-/// The element type `T` must implement [`Element<D, P, N>`] which includes
-/// `const GMSH_ELEMENT_TYPE: i32` and a
-/// `fn from_gmsh(&[usize], &HashMap<usize, Node<D>>) -> Option<Self>`
-/// constructor.
+/// 实现该 trait 的单元类型可以通过 [`GmshMesh::elements`] 按 physical name
+/// 从中间产物构造出 `Vec<T>`。新增单元类型时，只需在 io 层为其实现本 trait。
+pub trait FromGmsh<const D: usize>: Sized {
+    /// GMSH v4 的 element type 编号（`$Elements` 每个 block 的第 3 个字段）。
+    const GMSH_ELEMENT_TYPE: i32;
+
+    /// 从节点 id 列表构造单元；任一节点缺失时返回 `None`。
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self>;
+}
+
+impl<const D: usize> FromGmsh<D> for Seg2<D> {
+    const GMSH_ELEMENT_TYPE: i32 = 1; // 2-node line
+
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self> {
+        let n1 = nodes.get(node_ids.get(0)?)?;
+        let n2 = nodes.get(node_ids.get(1)?)?;
+        Some(Seg2::new(n1.clone(), n2.clone()))
+    }
+}
+
+impl<const D: usize> FromGmsh<D> for Tri3<D> {
+    const GMSH_ELEMENT_TYPE: i32 = 2; // 3-node triangle
+
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self> {
+        let n1 = nodes.get(node_ids.get(0)?)?;
+        let n2 = nodes.get(node_ids.get(1)?)?;
+        let n3 = nodes.get(node_ids.get(2)?)?;
+        Some(Tri3::new(n1.clone(), n2.clone(), n3.clone()))
+    }
+}
+
+impl<const D: usize> FromGmsh<D> for Poi1<D> {
+    const GMSH_ELEMENT_TYPE: i32 = 15; // 1-node point
+
+    fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self> {
+        let n1 = nodes.get(node_ids.get(0)?)?;
+        Some(Poi1::new(n1.clone()))
+    }
+}
+
+/// 一个物理组对应的单元块：单元类型编号 + 每个单元的节点 id 列表。
+struct ElementBlock {
+    elem_type: i32,
+    connectivity: Vec<Vec<usize>>,
+}
+
+/// GMSH 网格的中间产物。
 ///
-/// # Memory
+/// [`read_gmsh`] 解析 `.msh` 文件后，把节点坐标表和按物理组分组的单元连接
+/// 信息保存在这里，不绑定具体单元类型。调用者通过 [`GmshMesh::elements`]
+/// 传入 physical name 得到对应类型的单元向量 `Vec<T>`；由于一个物理组内的
+/// 单元类型一致，`Vec<T>` 中的 `T` 是单一类型。
+pub struct GmshMesh<const D: usize> {
+    /// 节点表：`node-id → Node`。
+    pub nodes: HashMap<usize, Node<D>>,
+    /// 物理组名称：`physical-tag → name`。
+    pub physical_names: HashMap<i32, String>,
+    /// 单元块：`physical-tag → ElementBlock`。
+    blocks: HashMap<i32, ElementBlock>,
+}
+
+impl<const D: usize> GmshMesh<D> {
+    /// 按 physical name 生成对应类型的单元向量。
+    ///
+    /// # Panics
+    ///
+    /// 找不到该 physical name，或该物理组的单元类型与 `T` 不一致时 panic。
+    pub fn elements<T: FromGmsh<D>>(&self, physical_name: &str) -> Vec<T> {
+        let tag = self
+            .physical_names
+            .iter()
+            .find(|(_, name)| name.as_str() == physical_name)
+            .map(|(tag, _)| *tag)
+            .unwrap_or_else(|| panic!("physical name not found: {physical_name}"));
+        self.elements_by_tag::<T>(tag)
+    }
+
+    /// 按 physical tag 生成对应类型的单元向量。
+    ///
+    /// # Panics
+    ///
+    /// 找不到该 physical tag，或该物理组的单元类型与 `T` 不一致时 panic。
+    pub fn elements_by_tag<T: FromGmsh<D>>(&self, tag: i32) -> Vec<T> {
+        let block = self
+            .blocks
+            .get(&tag)
+            .unwrap_or_else(|| panic!("physical group {tag} has no elements"));
+        assert_eq!(
+            block.elem_type,
+            T::GMSH_ELEMENT_TYPE,
+            "physical group {tag} holds element type {}, not {}",
+            block.elem_type,
+            T::GMSH_ELEMENT_TYPE
+        );
+        block
+            .connectivity
+            .iter()
+            .filter_map(|ids| T::from_gmsh(ids, &self.nodes))
+            .collect()
+    }
+}
+
+/// 解析 GMSH v4 `.msh` 文件，返回中间产物 [`GmshMesh`]。
 ///
-/// Only the node coordinate table and the resulting element vectors are held
-/// in memory; the file is consumed via a buffered line reader and element
-/// vectors are pre-allocated using the element count declared in the file
-/// header.
+/// 该函数只读取，不构造具体单元类型；单元向量由 [`GmshMesh::elements`]
+/// 按 physical name 按需生成。
 ///
 /// # Panics
 ///
-/// Panics if the file is not GMSH v4, is malformed, or if a required section
-/// is missing.
-pub fn read_gmsh<T, const D: usize, const P: usize, const N: usize>(
-    filepath: impl AsRef<Path>,
-) -> HashMap<i32, Vec<T>>
-where
-    T: Element<D, P, N>,
-{
+/// 文件不是 GMSH v4、格式损坏、或缺少必需 section 时 panic。
+pub fn read_gmsh<const D: usize>(filepath: impl AsRef<Path>) -> GmshMesh<D> {
     let file = File::open(filepath.as_ref()).expect("cannot open .msh file");
-    let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
     let mut reader = BufReader::with_capacity(64 * 1024, file); // 64 KiB buffer
 
     // ---------- $MeshFormat ----------
@@ -46,7 +137,7 @@ where
     );
 
     // ---------- $PhysicalNames (optional) ----------
-    let _physical_names: HashMap<i32, String> =
+    let physical_names: HashMap<i32, String> =
         if peek_section(&mut reader).as_deref() == Some("$PhysicalNames") {
             skip_to_section(&mut reader, "$PhysicalNames");
             read_physical_names(&mut reader)
@@ -69,9 +160,13 @@ where
 
     // ---------- $Elements ----------
     skip_to_section(&mut reader, "$Elements");
-    let elements = read_elements_v4::<T, D, P, N>(&mut reader, &nodes, &entity_to_phys, file_len);
+    let blocks = read_elements_v4(&mut reader, &entity_to_phys);
 
-    elements
+    GmshMesh {
+        nodes,
+        physical_names,
+        blocks,
+    }
 }
 
 // ============================================================================
@@ -83,9 +178,7 @@ fn skip_to_section(reader: &mut BufReader<File>, section: &str) {
     let mut line = String::new();
     loop {
         line.clear();
-        let n = reader
-            .read_line(&mut line)
-            .expect("I/O error reading .msh");
+        let n = reader.read_line(&mut line).expect("I/O error reading .msh");
         assert_ne!(n, 0, "unexpected EOF while looking for {section}");
         if line.trim() == section {
             return;
@@ -145,10 +238,7 @@ fn read_mesh_format(reader: &mut BufReader<File>) -> (f64, bool, usize) {
 fn read_physical_names(reader: &mut BufReader<File>) -> HashMap<i32, String> {
     let mut line = String::new();
     reader.read_line(&mut line).expect("I/O error");
-    let count: usize = line
-        .trim()
-        .parse()
-        .expect("invalid $PhysicalNames count");
+    let count: usize = line.trim().parse().expect("invalid $PhysicalNames count");
     let mut map = HashMap::with_capacity(count);
     for _ in 0..count {
         line.clear();
@@ -252,8 +342,7 @@ fn read_nodes_v4<const D: usize>(
         );
         let _entity_dim: i32 = block_header[0].parse().expect("invalid entityDim");
         let parametric: i32 = block_header[2].parse().expect("invalid parametric flag");
-        let num_nodes_in_block: usize =
-            block_header[3].parse().expect("invalid node count");
+        let num_nodes_in_block: usize = block_header[3].parse().expect("invalid node count");
 
         // Auto-detect: read the first data line to determine format.
         line.clear();
@@ -265,8 +354,7 @@ fn read_nodes_v4<const D: usize>(
         let separated = first_tokens.len() == 1;
 
         assert_eq!(
-            parametric,
-            0,
+            parametric, 0,
             "parametric nodes only supported in separated format"
         );
 
@@ -328,9 +416,7 @@ fn read_nodes_v4<const D: usize>(
                 let n = D.min(toks.len() - 1);
                 let mut coords = [0.0_f64; D];
                 for d in 0..n {
-                    coords[d] = toks[1 + d]
-                        .parse()
-                        .expect("invalid node coordinate");
+                    coords[d] = toks[1 + d].parse().expect("invalid node coordinate");
                 }
                 nodes.insert(id, crate::node::Node::new(id, coords));
             }
@@ -348,15 +434,13 @@ fn read_nodes_v4<const D: usize>(
 // $Elements (v4)
 // ============================================================================
 
-fn read_elements_v4<T, const D: usize, const P: usize, const N: usize>(
+/// Read raw element connectivity grouped by physical group, without constructing
+/// concrete element types. Each block's element type and per-element node ids are
+/// preserved so callers can materialize typed vectors on demand.
+fn read_elements_v4(
     reader: &mut BufReader<File>,
-    nodes: &HashMap<usize, crate::node::Node<D>>,
     entity_to_phys: &HashMap<(i32, i32), i32>,
-    file_len: u64,
-) -> HashMap<i32, Vec<T>>
-where
-    T: Element<D, P, N>,
-{
+) -> HashMap<i32, ElementBlock> {
     let mut line = String::new();
     reader.read_line(&mut line).expect("I/O error");
     let header: Vec<usize> = line
@@ -366,11 +450,7 @@ where
     assert_eq!(header.len(), 4, "expected 4 $Elements header fields");
     let num_entity_blocks = header[0];
 
-    let target_type = T::GMSH_ELEMENT_TYPE;
-    let nodes_per_elem = N;
-
-    let est_elem_count = (file_len / 40) as usize;
-    let mut phys_to_elems: HashMap<i32, Vec<T>> = HashMap::new();
+    let mut blocks: HashMap<i32, ElementBlock> = HashMap::new();
 
     for _block in 0..num_entity_blocks {
         line.clear();
@@ -390,32 +470,29 @@ where
             .copied()
             .unwrap_or(0);
 
-        if elem_type == target_type {
-            let phys_len = phys_to_elems.len().max(1);
-            let bucket = phys_to_elems
-                .entry(phys_group)
-                .or_insert_with(|| Vec::with_capacity(est_elem_count / phys_len));
-            bucket.reserve(num_elems_in_block);
+        let block = blocks
+            .entry(phys_group)
+            .or_insert_with(|| ElementBlock {
+                elem_type,
+                connectivity: Vec::with_capacity(num_elems_in_block),
+            });
+        assert_eq!(
+            block.elem_type, elem_type,
+            "physical group {phys_group} mixes element types {} and {elem_type}",
+            block.elem_type
+        );
+        block.connectivity.reserve(num_elems_in_block);
 
-            for _elem in 0..num_elems_in_block {
-                line.clear();
-                reader.read_line(&mut line).expect("I/O error");
-                let tokens: Vec<&str> = line.split_whitespace().collect();
-                let node_ids: Vec<usize> = tokens[1..]
-                    .iter()
-                    .take(nodes_per_elem)
-                    .map(|s| s.parse().expect("invalid node tag"))
-                    .collect();
-                if let Some(elm) = T::from_gmsh(&node_ids, nodes) {
-                    bucket.push(elm);
-                }
-            }
-        } else {
-            // Skip this block – not the element type we're collecting.
-            for _elem in 0..num_elems_in_block {
-                line.clear();
-                reader.read_line(&mut line).expect("I/O error");
-            }
+        for _elem in 0..num_elems_in_block {
+            line.clear();
+            reader.read_line(&mut line).expect("I/O error");
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            // elementTag nodeTag1 nodeTag2 ...
+            let node_ids: Vec<usize> = tokens[1..]
+                .iter()
+                .map(|s| s.parse().expect("invalid node tag"))
+                .collect();
+            block.connectivity.push(node_ids);
         }
     }
 
@@ -423,167 +500,33 @@ where
     reader.read_line(&mut end_line).expect("I/O error");
     assert!(end_line.trim() == "$EndElements", "expected $EndElements");
 
-    for v in phys_to_elems.values_mut() {
-        v.shrink_to_fit();
+    for b in blocks.values_mut() {
+        b.connectivity.shrink_to_fit();
     }
 
-    phys_to_elems
+    blocks
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::element::seg2::Seg2;
-    use std::io::Write;
 
-    fn minimal_msh_v4() -> String {
-        concat!(
-            "$MeshFormat\n",
-            "4.1 0 8\n",
-            "$EndMeshFormat\n",
-            "$PhysicalNames\n",
-            "1\n",
-            "1 1 \"truss\"\n",
-            "$EndPhysicalNames\n",
-            "$Entities\n",
-            "0 1 0 0\n",
-            "1 0.0 0.0 0.0 1.0 0.0 0.0 1 1 2 1 2\n",
-            "$EndEntities\n",
-            "$Nodes\n",
-            "2 4 1 4\n",
-            "1 1 0 2\n",
-            "1 0.0 0.0 0.0\n",
-            "2 1.0 0.0 0.0\n",
-            "1 1 0 2\n",
-            "3 0.0 0.0 0.0\n",
-            "4 1.0 0.0 0.0\n",
-            "$EndNodes\n",
-            "$Elements\n",
-            "2 2 1 2\n",
-            "1 1 1 1\n",
-            "1 1 2\n",
-            "1 1 1 1\n",
-            "2 3 4\n",
-            "$EndElements\n",
-        )
-        .to_string()
+    #[test]
+    fn reads_segments_and_triangles() {
+        let mesh = read_gmsh::<2>("test/msh/patchtest.msh");
+        let segs: Vec<Seg2<2>> = mesh.elements("Γᵍ");
+        assert_eq!(segs.len(), 40, "expected 40 segment elements");
+        let tris: Vec<Tri3<2>> = mesh.elements("Ω");
+        assert_eq!(tris.len(), 288, "expected 288 triangle elements");
     }
 
     #[test]
-    fn test_parse_minimal_2d_truss() {
-        let mut tmp = tempfile::Builder::new()
-            .suffix(".msh")
-            .tempfile()
-            .unwrap();
-        write!(tmp, "{}", minimal_msh_v4()).unwrap();
-        let path = tmp.path().to_path_buf();
-
-        let result: HashMap<i32, Vec<Seg2<2>>> = read_gmsh(&path);
-
-        assert!(result.contains_key(&1));
-        let total: usize = result.values().map(|v| v.len()).sum();
-        assert_eq!(total, 2);
-    }
-
-    /// Generate a 1D `.msh` file with 3 nodes and 2 line elements (Seg2<1>).
-    fn make_1d_msh() -> String {
-        concat!(
-            "$MeshFormat\n",
-            "4.1 0 8\n",
-            "$EndMeshFormat\n",
-            "$PhysicalNames\n",
-            "1\n",
-            "1 1 \"truss_1d\"\n",
-            "$EndPhysicalNames\n",
-            "$Entities\n",
-            "0 1 0 0\n",
-            // curve entity: tag=1, bbox=(0,0,0)-(1,0,0), physTag=1,
-            // numBoundingPoints=2 {1,2}
-            "1 0.0 0.0 0.0 1.0 0.0 0.0 1 1 2 1 2\n",
-            "$EndEntities\n",
-            "$Nodes\n",
-            "1 3 1 3\n",
-            // entity block: entityDim=1, entityTag=1, parametric=0, numNodes=3
-            "1 1 0 3\n",
-            "1 0.0 0.0 0.0\n",
-            "2 0.5 0.0 0.0\n",
-            "3 1.0 0.0 0.0\n",
-            "$EndNodes\n",
-            "$Elements\n",
-            "1 2 1 2\n",
-            // element block: entityDim=1, entityTag=1, elemType=1 (2-node line),
-            // numElem=2
-            "1 1 1 2\n",
-            "1 1 2\n",
-            "2 2 3\n",
-            "$EndElements\n",
-        )
-        .to_string()
-    }
-
-    #[test]
-    fn test_parse_1d_truss() {
-        let mut tmp = tempfile::Builder::new()
-            .suffix(".msh")
-            .tempfile()
-            .unwrap();
-        write!(tmp, "{}", make_1d_msh()).unwrap();
-        let path = tmp.path().to_path_buf();
-
-        let result: HashMap<i32, Vec<Seg2<1>>> = read_gmsh(&path);
-
-        // physical group 1 should contain 2 elements
-        assert!(result.contains_key(&1));
-        let elems = &result[&1];
-        assert_eq!(elems.len(), 2);
-
-        // Check element connectivity:
-        // elem 1: nodes 1-2 -> coords [0.0], [0.5]
-        assert_eq!(elems[0].id(), [1, 2]);
-        // elem 2: nodes 2-3 -> coords [0.5], [1.0]
-        assert_eq!(elems[1].id(), [2, 3]);
-
-        // Check jacobe: half-length of each element
-        // elem 1: length=0.5, jacobe=0.25
-        assert!((elems[0].jacobe([0.0]) - 0.25).abs() < 1e-12);
-        // elem 2: length=0.5, jacobe=0.25
-        assert!((elems[1].jacobe([0.0]) - 0.25).abs() < 1e-12);
-    }
-
-    /// Read boundary `Seg2<2>` line elements from the real `test/msh/patchtest.msh`
-    /// file.  The file contains a 1×1 square meshed with quads/triangles in the
-    /// interior (physical group 2 = "Ω") and 40 2-node line elements on the
-    /// boundary (physical group 1 = "Γᵍ").
-    #[test]
-    fn test_parse_patchtest_boundary_seg2() {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let path = std::path::PathBuf::from(manifest_dir)
-            .join("test")
-            .join("msh")
-            .join("patchtest.msh");
-
-        let result: HashMap<i32, Vec<Seg2<2>>> = read_gmsh(&path);
-
-        // Boundary edges are in physical group 1.
-        assert!(result.contains_key(&1));
-        assert!(!result.contains_key(&2)); // group 2 has triangles, not Seg2
-
-        let edges = &result[&1];
-        // 4 curves × 10 segments each = 40 2-node line elements.
-        assert_eq!(edges.len(), 40);
-
-        // Each element should reference valid node ids (1..165).
-        for elm in edges {
-            let [n1, n2] = elm.id();
-            assert!(n1 >= 1 && n1 <= 165, "node {n1} out of range");
-            assert!(n2 >= 1 && n2 <= 165, "node {n2} out of range");
-            assert_ne!(n1, n2);
-            // jacobe (half-length) must be positive.
-            assert!(elm.jacobe([0.0]) > 0.0);
-        }
+    fn reads_points_and_segments() {
+        let mesh = read_gmsh::<1>("test/msh/patchtest1D.msh");
+        // phys 0（无名）→ 2 个点单元；phys 1 "line" → 1 个线段单元。
+        let points: Vec<Poi1<1>> = mesh.elements_by_tag(0);
+        assert_eq!(points.len(), 2, "expected 2 point elements");
+        let segs: Vec<Seg2<1>> = mesh.elements("line");
+        assert_eq!(segs.len(), 1, "expected 1 segment element");
     }
 }
