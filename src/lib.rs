@@ -6,10 +6,11 @@
 //!
 //! - [`node`]：节点类型。
 //! - [`element`]：单元 trait（形函数、雅可比等）及具体单元（`Seg2`、`Tri3`、`Poi1`）。
-//! - [`operation`]：组装相关的抽象（`Variable`、`Elasticity`）。
+//! - [`operation`]：组装相关的抽象（`Variable` 及刚度、载荷、罚函数组装算子）。
 //! - [`io`]：网格文件读取（GMSH）。
 
 pub mod element;
 pub mod io;
 pub mod node;
 pub mod operation;
+pub mod sparse_vector;

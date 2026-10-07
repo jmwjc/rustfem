@@ -1,4 +1,4 @@
-pub mod truss;
+pub mod bar;
 
 use crate::element::Element;
 

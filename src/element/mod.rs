@@ -43,6 +43,19 @@ pub struct Keast<const G: usize>;
 /// 三维六面体张量积规则（N×N×N 点）。
 pub struct TensorProductHex<const N: usize>;
 
+/// 零维点积分规则（单点，权重为 1）。
+pub struct Point;
+
+/// 零维点的积分：单个积分点（参数坐标为空），权重为 1。
+impl IntegrationScheme<0, 1> for Point {
+    fn points() -> [[f64; 0]; 1] {
+        [[]]
+    }
+    fn weights() -> [f64; 1] {
+        [1.0]
+    }
+}
+
 /// 二维参考四边形 `[-1, 1]²` 上的 1×1 高斯积分（形心，权重之和为 `4`）。
 impl IntegrationScheme<2, 1> for TensorProductQuad<1> {
     fn points() -> [[f64; 2]; 1] {
