@@ -1,4 +1,5 @@
 pub mod poi1;
+pub mod quad4;
 pub mod seg2;
 pub mod tri3;
 
@@ -22,8 +23,64 @@ pub trait FullIntegration<const P: usize, const G: usize>: IntegrationScheme<P, 
 
 pub trait ReducedIntegration<const P: usize, const G: usize>: IntegrationScheme<P, G> {}
 
+// —— 积分方案参考数据（标记类型）——
+//
+// `IntegrationScheme` 的 impl 绑定到这些标记类型，以便在同一 `(P, G)` 下
+// 区分不同单元拓扑（如三角形与四边形同为二维、点数相同时）。
+
+/// 一维 Gauss–Legendre 规则（N 点）。
+pub struct GaussLegendre1D<const N: usize>;
+
+/// 二维三角形 Dunavant 规则（G 点）。
+pub struct Dunavant<const G: usize>;
+
+/// 二维四边形张量积规则（N×N 点）。
+pub struct TensorProductQuad<const N: usize>;
+
+/// 三维四面体 Keast 规则（G 点）。
+pub struct Keast<const G: usize>;
+
+/// 三维六面体张量积规则（N×N×N 点）。
+pub struct TensorProductHex<const N: usize>;
+
+/// 二维参考四边形 `[-1, 1]²` 上的 1×1 高斯积分（形心，权重之和为 `4`）。
+impl IntegrationScheme<2, 1> for TensorProductQuad<1> {
+    fn points() -> [[f64; 2]; 1] {
+        [[0.0, 0.0]]
+    }
+    fn weights() -> [f64; 1] {
+        [4.0]
+    }
+}
+
+/// 二维参考四边形 `[-1, 1]²` 上的 2×2 高斯积分：一维 2 点 Gauss–Legendre 规则的张量积。
+impl IntegrationScheme<2, 4> for TensorProductQuad<2> {
+    fn points() -> [[f64; 2]; 4] {
+        [
+            [-0.5773502691896257, -0.5773502691896257],
+            [-0.5773502691896257, 0.5773502691896257],
+            [0.5773502691896257, -0.5773502691896257],
+            [0.5773502691896257, 0.5773502691896257]
+        ]
+    }
+    fn weights() -> [f64; 4] {
+        [1.0, 1.0, 1.0, 1.0]
+    }
+}
+
+/// 三维参考立方体 `[-1, 1]³` 上的 1×1×1 高斯积分（形心，权重之和为 `8`）。
+impl IntegrationScheme<3, 1> for TensorProductHex<1> {
+    fn points() -> [[f64; 3]; 1] {
+        [[0.0, 0.0, 0.0]]
+    }
+    fn weights() -> [f64; 1] {
+        [8.0]
+    }
+}
+
+
 /// 一维参考区间 `[-1, 1]` 上的 1 点 Gauss–Legendre 积分（1 阶代数精度）。
-impl<T> IntegrationScheme<1, 1> for T {
+impl IntegrationScheme<1, 1> for GaussLegendre1D<1> {
     fn points() -> [[f64; 1]; 1] {
         [
             [0.0]
@@ -37,7 +94,7 @@ impl<T> IntegrationScheme<1, 1> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 2 点 Gauss–Legendre 积分（3 阶代数精度）。
-impl<T> IntegrationScheme<1, 2> for T {
+impl IntegrationScheme<1, 2> for GaussLegendre1D<2> {
     fn points() -> [[f64; 1]; 2] {
         [
             [-0.5773502691896257],
@@ -53,7 +110,7 @@ impl<T> IntegrationScheme<1, 2> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 3 点 Gauss–Legendre 积分（5 阶代数精度）。
-impl<T> IntegrationScheme<1, 3> for T {
+impl IntegrationScheme<1, 3> for GaussLegendre1D<3> {
     fn points() -> [[f64; 1]; 3] {
         [
             [-0.7745966692414834],
@@ -71,7 +128,7 @@ impl<T> IntegrationScheme<1, 3> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 4 点 Gauss–Legendre 积分（7 阶代数精度）。
-impl<T> IntegrationScheme<1, 4> for T {
+impl IntegrationScheme<1, 4> for GaussLegendre1D<4> {
     fn points() -> [[f64; 1]; 4] {
         [
             [-0.8611363115940526],
@@ -91,7 +148,7 @@ impl<T> IntegrationScheme<1, 4> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 5 点 Gauss–Legendre 积分（9 阶代数精度）。
-impl<T> IntegrationScheme<1, 5> for T {
+impl IntegrationScheme<1, 5> for GaussLegendre1D<5> {
     fn points() -> [[f64; 1]; 5] {
         [
             [-0.906179845938664],
@@ -113,7 +170,7 @@ impl<T> IntegrationScheme<1, 5> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 6 点 Gauss–Legendre 积分（11 阶代数精度）。
-impl<T> IntegrationScheme<1, 6> for T {
+impl IntegrationScheme<1, 6> for GaussLegendre1D<6> {
     fn points() -> [[f64; 1]; 6] {
         [
             [-0.932469514203152],
@@ -137,7 +194,7 @@ impl<T> IntegrationScheme<1, 6> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 7 点 Gauss–Legendre 积分（13 阶代数精度）。
-impl<T> IntegrationScheme<1, 7> for T {
+impl IntegrationScheme<1, 7> for GaussLegendre1D<7> {
     fn points() -> [[f64; 1]; 7] {
         [
             [-0.9491079123427585],
@@ -163,7 +220,7 @@ impl<T> IntegrationScheme<1, 7> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 8 点 Gauss–Legendre 积分（15 阶代数精度）。
-impl<T> IntegrationScheme<1, 8> for T {
+impl IntegrationScheme<1, 8> for GaussLegendre1D<8> {
     fn points() -> [[f64; 1]; 8] {
         [
             [-0.9602898564975363],
@@ -191,7 +248,7 @@ impl<T> IntegrationScheme<1, 8> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 9 点 Gauss–Legendre 积分（17 阶代数精度）。
-impl<T> IntegrationScheme<1, 9> for T {
+impl IntegrationScheme<1, 9> for GaussLegendre1D<9> {
     fn points() -> [[f64; 1]; 9] {
         [
             [-0.9681602395076261],
@@ -221,7 +278,7 @@ impl<T> IntegrationScheme<1, 9> for T {
 }
 
 /// 一维参考区间 `[-1, 1]` 上的 10 点 Gauss–Legendre 积分（19 阶代数精度）。
-impl<T> IntegrationScheme<1, 10> for T {
+impl IntegrationScheme<1, 10> for GaussLegendre1D<10> {
     fn points() -> [[f64; 1]; 10] {
         [
             [-0.9739065285171716],
@@ -254,7 +311,7 @@ impl<T> IntegrationScheme<1, 10> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 1 点 Dunavant 积分
 /// （1 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 1> for T {
+impl IntegrationScheme<2, 1> for Dunavant<1> {
     fn points() -> [[f64; 2]; 1] {
         [
             [0.333333333333333, 0.333333333333333]
@@ -269,7 +326,7 @@ impl<T> IntegrationScheme<2, 1> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 3 点 Dunavant 积分
 /// （2 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 3> for T {
+impl IntegrationScheme<2, 3> for Dunavant<3> {
     fn points() -> [[f64; 2]; 3] {
         [
             [0.666666666666667, 0.166666666666667],
@@ -288,7 +345,7 @@ impl<T> IntegrationScheme<2, 3> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 4 点 Dunavant 积分
 /// （3 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 4> for T {
+impl IntegrationScheme<2, 4> for Dunavant<4> {
     fn points() -> [[f64; 2]; 4] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -309,7 +366,7 @@ impl<T> IntegrationScheme<2, 4> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 6 点 Dunavant 积分
 /// （4 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 6> for T {
+impl IntegrationScheme<2, 6> for Dunavant<6> {
     fn points() -> [[f64; 2]; 6] {
         [
             [0.108103018168070, 0.445948490915965],
@@ -334,7 +391,7 @@ impl<T> IntegrationScheme<2, 6> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 7 点 Dunavant 积分
 /// （5 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 7> for T {
+impl IntegrationScheme<2, 7> for Dunavant<7> {
     fn points() -> [[f64; 2]; 7] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -361,7 +418,7 @@ impl<T> IntegrationScheme<2, 7> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 12 点 Dunavant 积分
 /// （6 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 12> for T {
+impl IntegrationScheme<2, 12> for Dunavant<12> {
     fn points() -> [[f64; 2]; 12] {
         [
             [0.501426509658179, 0.249286745170910],
@@ -398,7 +455,7 @@ impl<T> IntegrationScheme<2, 12> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 13 点 Dunavant 积分
 /// （7 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 13> for T {
+impl IntegrationScheme<2, 13> for Dunavant<13> {
     fn points() -> [[f64; 2]; 13] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -437,7 +494,7 @@ impl<T> IntegrationScheme<2, 13> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 16 点 Dunavant 积分
 /// （8 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 16> for T {
+impl IntegrationScheme<2, 16> for Dunavant<16> {
     fn points() -> [[f64; 2]; 16] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -482,7 +539,7 @@ impl<T> IntegrationScheme<2, 16> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 19 点 Dunavant 积分
 /// （9 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 19> for T {
+impl IntegrationScheme<2, 19> for Dunavant<19> {
     fn points() -> [[f64; 2]; 19] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -533,7 +590,7 @@ impl<T> IntegrationScheme<2, 19> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 25 点 Dunavant 积分
 /// （10 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 25> for T {
+impl IntegrationScheme<2, 25> for Dunavant<25> {
     fn points() -> [[f64; 2]; 25] {
         [
             [0.333333333333333, 0.333333333333333],
@@ -596,7 +653,7 @@ impl<T> IntegrationScheme<2, 25> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 27 点 Dunavant 积分
 /// （11 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 27> for T {
+impl IntegrationScheme<2, 27> for Dunavant<27> {
     fn points() -> [[f64; 2]; 27] {
         [
             [-0.069222096541517, 0.534611048270758],
@@ -663,7 +720,7 @@ impl<T> IntegrationScheme<2, 27> for T {
 
 /// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 33 点 Dunavant 积分
 /// （12 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
-impl<T> IntegrationScheme<2, 33> for T {
+impl IntegrationScheme<2, 33> for Dunavant<33> {
     fn points() -> [[f64; 2]; 33] {
         [
             [0.023565220452390, 0.488217389773805],
@@ -740,14 +797,10 @@ impl<T> IntegrationScheme<2, 33> for T {
     }
 }
 
-/// 二维参考四边形 `[-1, 1]²` 上的 n×n 高斯积分由一维 n 点 Gauss–Legendre
-/// 规则张量积构造：点 = (ξᵢ, ξⱼ)、权重 = wᵢ·wⱼ。其中 2×2（4 点）方案与上方
-/// 三角形 4 点规则同占 `IntegrationScheme<2, 4>` 编号，故不重复定义；
-/// 四边形积分以下方 3×3（及任意 n×n 张量积）表示。
 
 /// 二维参考四边形 `[-1, 1]²` 上的 3×3 高斯积分：一维 3 点 Gauss–Legendre
 /// 规则的张量积（权重之和等于参考四边形面积 `4`）。
-impl<T> IntegrationScheme<2, 9> for T {
+impl IntegrationScheme<2, 9> for TensorProductQuad<3> {
     fn points() -> [[f64; 2]; 9] {
         [
             [-0.7745966692414834, -0.7745966692414834],
@@ -778,7 +831,7 @@ impl<T> IntegrationScheme<2, 9> for T {
 
 /// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
 /// Keast 积分（1 点（形心），权重之和等于参考四面体体积 `1/6`）。
-impl<T> IntegrationScheme<3, 1> for T {
+impl IntegrationScheme<3, 1> for Keast<1> {
     fn points() -> [[f64; 3]; 1] {
         [
             [0.250000000000000000, 0.250000000000000000, 0.250000000000000000]
@@ -793,7 +846,7 @@ impl<T> IntegrationScheme<3, 1> for T {
 
 /// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
 /// Keast 积分（4 点（2 阶），权重之和等于参考四面体体积 `1/6`）。
-impl<T> IntegrationScheme<3, 4> for T {
+impl IntegrationScheme<3, 4> for Keast<4> {
     fn points() -> [[f64; 3]; 4] {
         [
             [0.585410196624968500, 0.138196601125010500, 0.138196601125010500],
@@ -814,7 +867,7 @@ impl<T> IntegrationScheme<3, 4> for T {
 
 /// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
 /// Keast 积分（5 点（3 阶），权重之和等于参考四面体体积 `1/6`）。
-impl<T> IntegrationScheme<3, 5> for T {
+impl IntegrationScheme<3, 5> for Keast<5> {
     fn points() -> [[f64; 3]; 5] {
         [
             [0.250000000000000000, 0.250000000000000000, 0.250000000000000000],
@@ -837,7 +890,7 @@ impl<T> IntegrationScheme<3, 5> for T {
 
 /// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
 /// Keast 积分（11 点（4 阶），权重之和等于参考四面体体积 `1/6`）。
-impl<T> IntegrationScheme<3, 11> for T {
+impl IntegrationScheme<3, 11> for Keast<11> {
     fn points() -> [[f64; 3]; 11] {
         [
             [0.250000000000000000, 0.250000000000000000, 0.250000000000000000],
@@ -872,7 +925,7 @@ impl<T> IntegrationScheme<3, 11> for T {
 
 /// 三维参考立方体 `[-1, 1]³` 上的 2×2×2 高斯积分：一维 2 点 Gauss–Legendre
 /// 规则的张量积（权重之和等于参考立方体体积 `8`）。
-impl<T> IntegrationScheme<3, 8> for T {
+impl IntegrationScheme<3, 8> for TensorProductHex<2> {
     fn points() -> [[f64; 3]; 8] {
         [
             [-0.5773502691896257, -0.5773502691896257, -0.5773502691896257],
@@ -901,7 +954,7 @@ impl<T> IntegrationScheme<3, 8> for T {
 
 /// 三维参考立方体 `[-1, 1]³` 上的 3×3×3 高斯积分：一维 3 点 Gauss–Legendre
 /// 规则的张量积（权重之和等于参考立方体体积 `8`）。
-impl<T> IntegrationScheme<3, 27> for T {
+impl IntegrationScheme<3, 27> for TensorProductHex<3> {
     fn points() -> [[f64; 3]; 27] {
         [
             [-0.7745966692414834, -0.7745966692414834, -0.7745966692414834],
@@ -968,7 +1021,9 @@ impl<T> IntegrationScheme<3, 27> for T {
 
 #[cfg(test)]
 mod tests {
-    use super::IntegrationScheme;
+    use super::{
+        Dunavant, GaussLegendre1D, IntegrationScheme, Keast, TensorProductHex, TensorProductQuad,
+    };
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-12
@@ -980,8 +1035,8 @@ mod tests {
         // 且 2 阶矩 ∫ξ²dξ = 2/3（n >= 2）。
         macro_rules! check {
             ($n:literal, $g:literal) => {{
-                let p = <() as IntegrationScheme<1, $g>>::points();
-                let w = <() as IntegrationScheme<1, $g>>::weights();
+                let p = <GaussLegendre1D<$g> as IntegrationScheme<1, $g>>::points();
+                let w = <GaussLegendre1D<$g> as IntegrationScheme<1, $g>>::weights();
                 let sum: f64 = w.iter().sum();
                 assert!(close(sum, 2.0), "n={}: sum={}", $n, sum);
                 let m2: f64 = (0..$g).map(|i| w[i] * p[i][0].powi(2)).sum();
@@ -1004,8 +1059,8 @@ mod tests {
 
     #[test]
     fn triangle_33_moments() {
-        let p = <() as IntegrationScheme<2, 33>>::points();
-        let w = <() as IntegrationScheme<2, 33>>::weights();
+        let p = <Dunavant<33> as IntegrationScheme<2, 33>>::points();
+        let w = <Dunavant<33> as IntegrationScheme<2, 33>>::weights();
         let sum: f64 = w.iter().sum();
         assert!(close(sum, 0.5), "sum={}", sum);
         // ∫x^12 dA = 12! / 14! = 1/182
@@ -1018,7 +1073,7 @@ mod tests {
         // 12 个 Dunavant 规则的权重之和都应等于参考三角形面积 1/2。
         macro_rules! check {
             ($g:literal) => {{
-                let w = <() as IntegrationScheme<2, $g>>::weights();
+                let w = <Dunavant<$g> as IntegrationScheme<2, $g>>::weights();
                 let sum: f64 = w.iter().sum();
                 assert!(close(sum, 0.5), "G={}: sum={}", $g, sum);
             }};
@@ -1039,8 +1094,8 @@ mod tests {
 
     #[test]
     fn quad_tensor_moments() {
-        let p = <() as IntegrationScheme<2, 9>>::points();
-        let w = <() as IntegrationScheme<2, 9>>::weights();
+        let p = <TensorProductQuad<3> as IntegrationScheme<2, 9>>::points();
+        let w = <TensorProductQuad<3> as IntegrationScheme<2, 9>>::weights();
         let sum: f64 = w.iter().sum();
         assert!(close(sum, 4.0), "sum={}", sum);
         // ∫∫ x²y² dxdy = (2/3)² = 4/9
@@ -1050,8 +1105,8 @@ mod tests {
 
     #[test]
     fn tetrahedron_moments() {
-        let p = <() as IntegrationScheme<3, 4>>::points();
-        let w = <() as IntegrationScheme<3, 4>>::weights();
+        let p = <Keast<4> as IntegrationScheme<3, 4>>::points();
+        let w = <Keast<4> as IntegrationScheme<3, 4>>::weights();
         let sum: f64 = w.iter().sum();
         assert!(close(sum, 1.0 / 6.0), "sum={}", sum);
         // ∫∫∫ x² dV = 2! / 5! = 1/60
@@ -1061,8 +1116,8 @@ mod tests {
 
     #[test]
     fn hex_tensor_moments() {
-        let p = <() as IntegrationScheme<3, 8>>::points();
-        let w = <() as IntegrationScheme<3, 8>>::weights();
+        let p = <TensorProductHex<2> as IntegrationScheme<3, 8>>::points();
+        let w = <TensorProductHex<2> as IntegrationScheme<3, 8>>::weights();
         let sum: f64 = w.iter().sum();
         assert!(close(sum, 8.0), "sum={}", sum);
         // ∫∫∫ x²y²z² dxdydz = (2/3)³ = 8/27

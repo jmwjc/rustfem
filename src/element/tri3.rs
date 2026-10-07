@@ -1,3 +1,4 @@
+use crate::element::{Dunavant, Element, FullIntegration, IntegrationScheme, ReducedIntegration};
 use crate::node::Node;
 
 pub struct Tri3<const D: usize> {
@@ -10,8 +11,128 @@ impl<const D: usize> Tri3<D> {
             nodes: [n1, n2, n3],
         }
     }
+}
 
-    pub fn id(&self) -> [usize; 3] {
+// 三角形完全积分：3 点 Dunavant 规则（2 阶代数精度）；
+// 减缩积分：1 点（形心）。
+impl<const D: usize> IntegrationScheme<2, 1> for Tri3<D> {
+    fn points() -> [[f64; 2]; 1] {
+        <Dunavant<1> as IntegrationScheme<2, 1>>::points()
+    }
+    fn weights() -> [f64; 1] {
+        <Dunavant<1> as IntegrationScheme<2, 1>>::weights()
+    }
+}
+
+impl<const D: usize> IntegrationScheme<2, 3> for Tri3<D> {
+    fn points() -> [[f64; 2]; 3] {
+        <Dunavant<3> as IntegrationScheme<2, 3>>::points()
+    }
+    fn weights() -> [f64; 3] {
+        <Dunavant<3> as IntegrationScheme<2, 3>>::weights()
+    }
+}
+
+impl<const D: usize> FullIntegration<2, 3> for Tri3<D> {}
+impl<const D: usize> ReducedIntegration<2, 1> for Tri3<D> {}
+
+impl<const D: usize> Element<D, 2, 3> for Tri3<D> {
+    fn id(&self) -> [usize; 3] {
         [self.nodes[0].id, self.nodes[1].id, self.nodes[2].id]
+    }
+
+    /// 面积坐标形函数：节点 1、2、3 分别对应参考三角形顶点
+    /// `(0, 0)`、`(1, 0)`、`(0, 1)`。
+    fn shape(&self, parametric_coordinates: [f64; 2]) -> [f64; 3] {
+        let ξ = parametric_coordinates[0];
+        let η = parametric_coordinates[1];
+        [1.0 - ξ - η, ξ, η]
+    }
+
+    /// 对第一个参数坐标 `ξ` 的偏导 `∂N/∂ξ`。
+    ///
+    /// 注：`Element` 的该方法返回 `[f64; N]`，无法容纳二维单元的完整梯度；
+    /// 对 `η` 的偏导及物理梯度需结合 [`Self::jacobe_mat`] 另行求得。
+    fn derivative_shape(&self, _parametric_coordinates: [f64; 2]) -> [f64; 3] {
+        [-1.0, 1.0, 0.0]
+    }
+
+    fn vertices_coordinates(&self) -> [[f64; D]; 3] {
+        [
+            self.nodes[0].coordinates,
+            self.nodes[1].coordinates,
+            self.nodes[2].coordinates,
+        ]
+    }
+
+    fn coordinates(&self, parametric_coordinates: [f64; 2]) -> [f64; D] {
+        let shape = self.shape(parametric_coordinates);
+        let vertices = self.vertices_coordinates();
+        std::array::from_fn(|i| {
+            vertices[0][i] * shape[0] + vertices[1][i] * shape[1] + vertices[2][i] * shape[2]
+        })
+    }
+
+    /// 参考三角形到物理三角形的面积比：`JᵀJ` 的行列式的平方根
+    /// （`D = 2` 时即 `|det J|`，`D = 3` 时为两切向量的叉积模）。
+    fn jacobe(&self, parametric_coordinates: [f64; 2]) -> f64 {
+        let j = self.jacobe_mat(parametric_coordinates);
+        let aa: f64 = (0..D).map(|i| j[i][0] * j[i][0]).sum();
+        let bb: f64 = (0..D).map(|i| j[i][1] * j[i][1]).sum();
+        let ab: f64 = (0..D).map(|i| j[i][0] * j[i][1]).sum();
+        (aa * bb - ab * ab).sqrt()
+    }
+
+    /// `J[i][0] = ∂x_i/∂ξ`、`J[i][1] = ∂x_i/∂η`（线性三角形为常数）。
+    fn jacobe_mat(&self, _parametric_coordinates: [f64; 2]) -> [[f64; 2]; D] {
+        std::array::from_fn(|i| {
+            [
+                self.nodes[1].coordinates[i] - self.nodes[0].coordinates[i],
+                self.nodes[2].coordinates[i] - self.nodes[0].coordinates[i],
+            ]
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Tri3;
+    use crate::element::Element;
+    use crate::node::Node;
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-12
+    }
+
+    #[test]
+    fn tri3_shape_and_area() {
+        // 直角三角形 (0,0)、(3,0)、(0,4)：面积 6，jacobe 应为 2×面积 = 12。
+        let t = Tri3::new(
+            Node::new(0, [0.0, 0.0]),
+            Node::new(1, [3.0, 0.0]),
+            Node::new(2, [0.0, 4.0]),
+        );
+        assert_eq!(t.id(), [0, 1, 2]);
+        // 顶点处的形函数取值
+        assert_eq!(t.shape([0.0, 0.0]), [1.0, 0.0, 0.0]);
+        assert_eq!(t.shape([1.0, 0.0]), [0.0, 1.0, 0.0]);
+        assert_eq!(t.shape([0.0, 1.0]), [0.0, 0.0, 1.0]);
+        // 形心 (ξ, η) = (1/3, 1/3) 映射到物理形心 (1, 4/3)
+        let c = t.coordinates([1.0 / 3.0, 1.0 / 3.0]);
+        assert!(close(c[0], 1.0));
+        assert!(close(c[1], 4.0 / 3.0));
+        // jacobe = |det J| = 2×面积 = 12
+        assert!(close(t.jacobe([0.0, 0.0]), 12.0));
+    }
+
+    #[test]
+    fn tri3_jacobe_3d() {
+        // 空间三角形 (0,0,0)、(2,0,0)、(0,3,0)：面积 3，jacobe = 2×面积 = 6。
+        let t = Tri3::new(
+            Node::new(0, [0.0, 0.0, 0.0]),
+            Node::new(1, [2.0, 0.0, 0.0]),
+            Node::new(2, [0.0, 3.0, 0.0]),
+        );
+        assert!(close(t.jacobe([0.0, 0.0]), 6.0));
     }
 }

@@ -1,4 +1,4 @@
-use crate::element::{Element, FullIntegration, ReducedIntegration};
+use crate::element::{Element, FullIntegration, GaussLegendre1D, IntegrationScheme, ReducedIntegration};
 use crate::node::Node;
 
 pub struct Seg2<const D: usize> {
@@ -8,6 +8,24 @@ pub struct Seg2<const D: usize> {
 impl<const D: usize> Seg2<D> {
     pub fn new(n1: Node<D>, n2: Node<D>) -> Self {
         Seg2 { nodes: [n1, n2] }
+    }
+}
+
+impl<const D: usize> IntegrationScheme<1, 1> for Seg2<D> {
+    fn points() -> [[f64; 1]; 1] {
+        <GaussLegendre1D<1> as IntegrationScheme<1, 1>>::points()
+    }
+    fn weights() -> [f64; 1] {
+        <GaussLegendre1D<1> as IntegrationScheme<1, 1>>::weights()
+    }
+}
+
+impl<const D: usize> IntegrationScheme<1, 2> for Seg2<D> {
+    fn points() -> [[f64; 1]; 2] {
+        <GaussLegendre1D<2> as IntegrationScheme<1, 2>>::points()
+    }
+    fn weights() -> [f64; 2] {
+        <GaussLegendre1D<2> as IntegrationScheme<1, 2>>::weights()
     }
 }
 
