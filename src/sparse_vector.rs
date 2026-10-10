@@ -1,8 +1,8 @@
-//! 稀疏向量组装：`Doublet` 条目与构造函数，类比 faer 稀疏矩阵的 `Triplet`。
+//! Sparse vector assembly: `Doublet` entries and a constructor, analogous to the `Triplet` of faer's sparse matrices.
 
 use faer::prelude::*;
 
-/// 稀疏向量的组装条目：`(索引, 值)` 二元组，类比 faer 稀疏矩阵的 `Triplet`。
+/// An assembly entry for a sparse vector: a `(index, value)` pair, analogous to the `Triplet` of faer's sparse matrices.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Doublet<I, T> {
     pub index: I,

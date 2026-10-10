@@ -12,15 +12,17 @@ use crate::node::Node;
 // Public API
 // ============================================================================
 
-/// 单元类型与 GMSH 文件格式之间的桥接 trait。
+/// Bridge trait between an element type and the GMSH file format.
 ///
-/// 实现该 trait 的单元类型可以通过 [`GmshMesh::elements`] 按 physical name
-/// 从中间产物构造出 `Vec<T>`。新增单元类型时，只需在 io 层为其实现本 trait。
+/// Element types implementing this trait can be constructed from the
+/// intermediate representation as a `Vec<T>` by physical name via
+/// [`GmshMesh::elements`]. To support a new element type, just implement
+/// this trait for it in the io layer.
 pub trait FromGmsh<const D: usize>: Sized {
-    /// GMSH v4 的 element type 编号（`$Elements` 每个 block 的第 3 个字段）。
+    /// GMSH v4 element type number (the 3rd field of each block in `$Elements`).
     const GMSH_ELEMENT_TYPE: i32;
 
-    /// 从节点 id 列表构造单元；任一节点缺失时返回 `None`。
+    /// Constructs an element from a list of node ids; returns `None` if any node is missing.
     fn from_gmsh(node_ids: &[usize], nodes: &HashMap<usize, Node<D>>) -> Option<Self>;
 }
 

@@ -21,16 +21,17 @@ fn main() {
 
     let start = Instant::now();
 
-    // ---------- 1. GMSH 读取 ----------
+    // ---------- 1. GMSH reading ----------
     let mesh = gmsh::read_gmsh::<2>("test/msh/patchtest.msh");
     let segs: Vec<Seg2<2>> = mesh.elements("Γᵍ");
     let tris: Vec<Tri3<2>> = mesh.elements("Ω");
     println!("segments (Γᵍ): {}", segs.len());
     println!("triangles (Ω): {}", tris.len());
 
-    // ---------- 2. 1D 桁架组装 + 求解 ----------
-    // 构造一根由 10 个 Seg2<1> 单元组成的 1D 杆，左端固定，
-    // 受自重（均布体力 f = 1）与右端集中拉力 P = 1。
+    // ---------- 2. 1D truss assembly + solve ----------
+    // Build a 1D bar made of 10 Seg2<1> elements, fixed at the left end,
+    // subject to its own weight (uniform body force f = 1) and a concentrated
+    // tensile load P = 1 at the right end.
     let np = 11;
     let ne = np - 1;
     let bars: Vec<Seg2<1>> = (0..ne)
@@ -42,31 +43,31 @@ fn main() {
         })
         .collect();
 
-    // 左端约束点、右端作用点（点单元）。
+    // Constraint point at the left end and load point at the right end (point elements).
     let left = Poi1::new(Node::new(0, [0.0]));
     let right = Poi1::new(Node::new(np - 1, [1.0]));
 
     let mut triplets = stiffness(&bars, 1.0);
 
-    // 左端固定：罚函数法施加位移约束 u(0) = 0。
+    // Left end fixed: impose the displacement constraint u(0) = 0 via the penalty method.
     let alpha: f64 = 1e7;
     let (penalty_triplets, penalty_doublets) = displacement_penalty(&vec![left], alpha, 0.0);
     triplets.extend(penalty_triplets);
 
     let k = SparseColMat::<usize, f64>::try_new_from_triplets(np, np, &triplets).unwrap();
 
-    // 均布体力（自重）：自然边界条件（体力）。
+    // Uniform body force (self-weight): natural boundary condition (body force).
     let mut doublets = body_force(&bars, |_| 1.0);
-    // 右端受单位拉力：自然边界条件（集中力）。
+    // Unit tensile load at the right end: natural boundary condition (concentrated force).
     doublets.extend(traction(&vec![right], 1.0));
-    // 罚函数载荷。
+    // Penalty load.
     doublets.extend(penalty_doublets);
     let f = try_new_from_doublet(np, &doublets);
 
     let llt = k.sp_cholesky(Side::Lower).unwrap();
     let d = llt.solve(&f);
 
-    println!("truss displacement: {:?}", d);
+    println!("bar displacement: {:?}", d);
 
     println!("Time elapsed: {:?}", start.elapsed());
 }

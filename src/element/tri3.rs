@@ -13,8 +13,8 @@ impl<const D: usize> Tri3<D> {
     }
 }
 
-// 三角形完全积分：3 点 Dunavant 规则（2 阶代数精度）；
-// 减缩积分：1 点（形心）。
+// Full integration for the triangle: 3-point Dunavant rule (algebraic degree 2);
+// reduced integration: 1 point (centroid).
 impl<const D: usize> IntegrationScheme<2, 1> for Tri3<D> {
     fn points() -> [[f64; 2]; 1] {
         <Dunavant<1> as IntegrationScheme<2, 1>>::points()
@@ -41,18 +41,19 @@ impl<const D: usize> Element<D, 2, 3> for Tri3<D> {
         [self.nodes[0].id, self.nodes[1].id, self.nodes[2].id]
     }
 
-    /// 面积坐标形函数：节点 1、2、3 分别对应参考三角形顶点
-    /// `(0, 0)`、`(1, 0)`、`(0, 1)`。
+    /// Area-coordinate shape functions: nodes 1, 2, 3 correspond to the reference
+    /// triangle vertices `(0, 0)`, `(1, 0)`, `(0, 1)`.
     fn shape(&self, parametric_coordinates: [f64; 2]) -> [f64; 3] {
         let ξ = parametric_coordinates[0];
         let η = parametric_coordinates[1];
         [1.0 - ξ - η, ξ, η]
     }
 
-    /// 对第一个参数坐标 `ξ` 的偏导 `∂N/∂ξ`。
+    /// Partial derivative with respect to the first parametric coordinate `ξ`, `∂N/∂ξ`.
     ///
-    /// 注：`Element` 的该方法返回 `[f64; N]`，无法容纳二维单元的完整梯度；
-    /// 对 `η` 的偏导及物理梯度需结合 [`Self::jacobe_mat`] 另行求得。
+    /// Note: the `Element` trait method returns `[f64; N]`, which cannot hold the full
+    /// gradient of a 2D element; the derivative with respect to `η` and the physical
+    /// gradient must be obtained separately, combined with [`Self::jacobe_mat`].
     fn derivative_shape(&self, _parametric_coordinates: [f64; 2]) -> [f64; 3] {
         [-1.0, 1.0, 0.0]
     }

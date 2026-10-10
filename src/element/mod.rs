@@ -23,30 +23,31 @@ pub trait FullIntegration<const P: usize, const G: usize>: IntegrationScheme<P, 
 
 pub trait ReducedIntegration<const P: usize, const G: usize>: IntegrationScheme<P, G> {}
 
-// —— 积分方案参考数据（标记类型）——
+// —— Reference data for integration schemes (marker types) ——
 //
-// `IntegrationScheme` 的 impl 绑定到这些标记类型，以便在同一 `(P, G)` 下
-// 区分不同单元拓扑（如三角形与四边形同为二维、点数相同时）。
+// The impls of `IntegrationScheme` are attached to these marker types so that
+// different element topologies can be distinguished under the same `(P, G)`
+// (e.g. triangles and quadrilaterals, which are both two-dimensional with the same number of points).
 
-/// 一维 Gauss–Legendre 规则（N 点）。
+/// 1D Gauss–Legendre rule (N points).
 pub struct GaussLegendre1D<const N: usize>;
 
-/// 二维三角形 Dunavant 规则（G 点）。
+/// 2D triangular Dunavant rule (G points).
 pub struct Dunavant<const G: usize>;
 
-/// 二维四边形张量积规则（N×N 点）。
+/// 2D quadrilateral tensor-product rule (N×N points).
 pub struct TensorProductQuad<const N: usize>;
 
-/// 三维四面体 Keast 规则（G 点）。
+/// 3D tetrahedral Keast rule (G points).
 pub struct Keast<const G: usize>;
 
-/// 三维六面体张量积规则（N×N×N 点）。
+/// 3D hexahedral tensor-product rule (N×N×N points).
 pub struct TensorProductHex<const N: usize>;
 
-/// 零维点积分规则（单点，权重为 1）。
+/// 0D point integration rule (single point, weight 1).
 pub struct Point;
 
-/// 零维点的积分：单个积分点（参数坐标为空），权重为 1。
+/// Integration for a 0D point: a single integration point (empty parametric coordinates) with weight 1.
 impl IntegrationScheme<0, 1> for Point {
     fn points() -> [[f64; 0]; 1] {
         [[]]
@@ -56,7 +57,7 @@ impl IntegrationScheme<0, 1> for Point {
     }
 }
 
-/// 二维参考四边形 `[-1, 1]²` 上的 1×1 高斯积分（形心，权重之和为 `4`）。
+/// 1×1 Gauss integration on the 2D reference quadrilateral `[-1, 1]²` (centroid; weights sum to `4`).
 impl IntegrationScheme<2, 1> for TensorProductQuad<1> {
     fn points() -> [[f64; 2]; 1] {
         [[0.0, 0.0]]
@@ -66,7 +67,7 @@ impl IntegrationScheme<2, 1> for TensorProductQuad<1> {
     }
 }
 
-/// 二维参考四边形 `[-1, 1]²` 上的 2×2 高斯积分：一维 2 点 Gauss–Legendre 规则的张量积。
+/// 2×2 Gauss integration on the 2D reference quadrilateral `[-1, 1]²`: tensor product of the 1D 2-point Gauss–Legendre rule.
 impl IntegrationScheme<2, 4> for TensorProductQuad<2> {
     fn points() -> [[f64; 2]; 4] {
         [
@@ -81,7 +82,7 @@ impl IntegrationScheme<2, 4> for TensorProductQuad<2> {
     }
 }
 
-/// 三维参考立方体 `[-1, 1]³` 上的 1×1×1 高斯积分（形心，权重之和为 `8`）。
+/// 1×1×1 Gauss integration on the 3D reference cube `[-1, 1]³` (centroid; weights sum to `8`).
 impl IntegrationScheme<3, 1> for TensorProductHex<1> {
     fn points() -> [[f64; 3]; 1] {
         [[0.0, 0.0, 0.0]]
@@ -92,7 +93,7 @@ impl IntegrationScheme<3, 1> for TensorProductHex<1> {
 }
 
 
-/// 一维参考区间 `[-1, 1]` 上的 1 点 Gauss–Legendre 积分（1 阶代数精度）。
+/// 1-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 1).
 impl IntegrationScheme<1, 1> for GaussLegendre1D<1> {
     fn points() -> [[f64; 1]; 1] {
         [
@@ -106,7 +107,7 @@ impl IntegrationScheme<1, 1> for GaussLegendre1D<1> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 2 点 Gauss–Legendre 积分（3 阶代数精度）。
+/// 2-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 3).
 impl IntegrationScheme<1, 2> for GaussLegendre1D<2> {
     fn points() -> [[f64; 1]; 2] {
         [
@@ -122,7 +123,7 @@ impl IntegrationScheme<1, 2> for GaussLegendre1D<2> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 3 点 Gauss–Legendre 积分（5 阶代数精度）。
+/// 3-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 5).
 impl IntegrationScheme<1, 3> for GaussLegendre1D<3> {
     fn points() -> [[f64; 1]; 3] {
         [
@@ -140,7 +141,7 @@ impl IntegrationScheme<1, 3> for GaussLegendre1D<3> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 4 点 Gauss–Legendre 积分（7 阶代数精度）。
+/// 4-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 7).
 impl IntegrationScheme<1, 4> for GaussLegendre1D<4> {
     fn points() -> [[f64; 1]; 4] {
         [
@@ -160,7 +161,7 @@ impl IntegrationScheme<1, 4> for GaussLegendre1D<4> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 5 点 Gauss–Legendre 积分（9 阶代数精度）。
+/// 5-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 9).
 impl IntegrationScheme<1, 5> for GaussLegendre1D<5> {
     fn points() -> [[f64; 1]; 5] {
         [
@@ -182,7 +183,7 @@ impl IntegrationScheme<1, 5> for GaussLegendre1D<5> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 6 点 Gauss–Legendre 积分（11 阶代数精度）。
+/// 6-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 11).
 impl IntegrationScheme<1, 6> for GaussLegendre1D<6> {
     fn points() -> [[f64; 1]; 6] {
         [
@@ -206,7 +207,7 @@ impl IntegrationScheme<1, 6> for GaussLegendre1D<6> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 7 点 Gauss–Legendre 积分（13 阶代数精度）。
+/// 7-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 13).
 impl IntegrationScheme<1, 7> for GaussLegendre1D<7> {
     fn points() -> [[f64; 1]; 7] {
         [
@@ -232,7 +233,7 @@ impl IntegrationScheme<1, 7> for GaussLegendre1D<7> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 8 点 Gauss–Legendre 积分（15 阶代数精度）。
+/// 8-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 15).
 impl IntegrationScheme<1, 8> for GaussLegendre1D<8> {
     fn points() -> [[f64; 1]; 8] {
         [
@@ -260,7 +261,7 @@ impl IntegrationScheme<1, 8> for GaussLegendre1D<8> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 9 点 Gauss–Legendre 积分（17 阶代数精度）。
+/// 9-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 17).
 impl IntegrationScheme<1, 9> for GaussLegendre1D<9> {
     fn points() -> [[f64; 1]; 9] {
         [
@@ -290,7 +291,7 @@ impl IntegrationScheme<1, 9> for GaussLegendre1D<9> {
     }
 }
 
-/// 一维参考区间 `[-1, 1]` 上的 10 点 Gauss–Legendre 积分（19 阶代数精度）。
+/// 10-point Gauss–Legendre integration on the 1D reference interval `[-1, 1]` (degree of exactness 19).
 impl IntegrationScheme<1, 10> for GaussLegendre1D<10> {
     fn points() -> [[f64; 1]; 10] {
         [
@@ -322,8 +323,8 @@ impl IntegrationScheme<1, 10> for GaussLegendre1D<10> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 1 点 Dunavant 积分
-/// （1 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 1-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 1; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 1> for Dunavant<1> {
     fn points() -> [[f64; 2]; 1] {
         [
@@ -337,8 +338,8 @@ impl IntegrationScheme<2, 1> for Dunavant<1> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 3 点 Dunavant 积分
-/// （2 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 3-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 2; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 3> for Dunavant<3> {
     fn points() -> [[f64; 2]; 3] {
         [
@@ -356,8 +357,8 @@ impl IntegrationScheme<2, 3> for Dunavant<3> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 4 点 Dunavant 积分
-/// （3 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 4-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 3; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 4> for Dunavant<4> {
     fn points() -> [[f64; 2]; 4] {
         [
@@ -377,8 +378,8 @@ impl IntegrationScheme<2, 4> for Dunavant<4> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 6 点 Dunavant 积分
-/// （4 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 6-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 4; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 6> for Dunavant<6> {
     fn points() -> [[f64; 2]; 6] {
         [
@@ -402,8 +403,8 @@ impl IntegrationScheme<2, 6> for Dunavant<6> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 7 点 Dunavant 积分
-/// （5 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 7-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 5; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 7> for Dunavant<7> {
     fn points() -> [[f64; 2]; 7] {
         [
@@ -429,8 +430,8 @@ impl IntegrationScheme<2, 7> for Dunavant<7> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 12 点 Dunavant 积分
-/// （6 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 12-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 6; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 12> for Dunavant<12> {
     fn points() -> [[f64; 2]; 12] {
         [
@@ -466,8 +467,8 @@ impl IntegrationScheme<2, 12> for Dunavant<12> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 13 点 Dunavant 积分
-/// （7 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 13-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 7; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 13> for Dunavant<13> {
     fn points() -> [[f64; 2]; 13] {
         [
@@ -505,8 +506,8 @@ impl IntegrationScheme<2, 13> for Dunavant<13> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 16 点 Dunavant 积分
-/// （8 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 16-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 8; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 16> for Dunavant<16> {
     fn points() -> [[f64; 2]; 16] {
         [
@@ -550,8 +551,8 @@ impl IntegrationScheme<2, 16> for Dunavant<16> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 19 点 Dunavant 积分
-/// （9 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 19-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 9; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 19> for Dunavant<19> {
     fn points() -> [[f64; 2]; 19] {
         [
@@ -601,8 +602,8 @@ impl IntegrationScheme<2, 19> for Dunavant<19> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 25 点 Dunavant 积分
-/// （10 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 25-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 10; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 25> for Dunavant<25> {
     fn points() -> [[f64; 2]; 25] {
         [
@@ -664,8 +665,8 @@ impl IntegrationScheme<2, 25> for Dunavant<25> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 27 点 Dunavant 积分
-/// （11 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 27-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 11; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 27> for Dunavant<27> {
     fn points() -> [[f64; 2]; 27] {
         [
@@ -731,8 +732,8 @@ impl IntegrationScheme<2, 27> for Dunavant<27> {
     }
 }
 
-/// 二维参考三角形 `{(0, 0), (1, 0), (0, 1)}` 上的 33 点 Dunavant 积分
-/// （12 阶代数精度，权重之和等于参考三角形面积 `1/2`）。
+/// 33-point Dunavant integration on the 2D reference triangle `{(0, 0), (1, 0), (0, 1)}`
+/// (degree of exactness 12; weights sum to the reference triangle area `1/2`).
 impl IntegrationScheme<2, 33> for Dunavant<33> {
     fn points() -> [[f64; 2]; 33] {
         [
@@ -811,8 +812,8 @@ impl IntegrationScheme<2, 33> for Dunavant<33> {
 }
 
 
-/// 二维参考四边形 `[-1, 1]²` 上的 3×3 高斯积分：一维 3 点 Gauss–Legendre
-/// 规则的张量积（权重之和等于参考四边形面积 `4`）。
+/// 3×3 Gauss integration on the 2D reference quadrilateral `[-1, 1]²`: tensor
+/// product of the 1D 3-point Gauss–Legendre rule (weights sum to the reference quadrilateral area `4`).
 impl IntegrationScheme<2, 9> for TensorProductQuad<3> {
     fn points() -> [[f64; 2]; 9] {
         [
@@ -842,8 +843,8 @@ impl IntegrationScheme<2, 9> for TensorProductQuad<3> {
     }
 }
 
-/// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
-/// Keast 积分（1 点（形心），权重之和等于参考四面体体积 `1/6`）。
+/// Keast integration on the 3D reference tetrahedron `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}`
+/// (1 point at the centroid; weights sum to the reference tetrahedron volume `1/6`).
 impl IntegrationScheme<3, 1> for Keast<1> {
     fn points() -> [[f64; 3]; 1] {
         [
@@ -857,8 +858,8 @@ impl IntegrationScheme<3, 1> for Keast<1> {
     }
 }
 
-/// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
-/// Keast 积分（4 点（2 阶），权重之和等于参考四面体体积 `1/6`）。
+/// Keast integration on the 3D reference tetrahedron `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}`
+/// (4 points, degree of exactness 2; weights sum to the reference tetrahedron volume `1/6`).
 impl IntegrationScheme<3, 4> for Keast<4> {
     fn points() -> [[f64; 3]; 4] {
         [
@@ -878,8 +879,8 @@ impl IntegrationScheme<3, 4> for Keast<4> {
     }
 }
 
-/// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
-/// Keast 积分（5 点（3 阶），权重之和等于参考四面体体积 `1/6`）。
+/// Keast integration on the 3D reference tetrahedron `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}`
+/// (5 points, degree of exactness 3; weights sum to the reference tetrahedron volume `1/6`).
 impl IntegrationScheme<3, 5> for Keast<5> {
     fn points() -> [[f64; 3]; 5] {
         [
@@ -901,8 +902,8 @@ impl IntegrationScheme<3, 5> for Keast<5> {
     }
 }
 
-/// 三维参考四面体 `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}` 上的
-/// Keast 积分（11 点（4 阶），权重之和等于参考四面体体积 `1/6`）。
+/// Keast integration on the 3D reference tetrahedron `{(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)}`
+/// (11 points, degree of exactness 4; weights sum to the reference tetrahedron volume `1/6`).
 impl IntegrationScheme<3, 11> for Keast<11> {
     fn points() -> [[f64; 3]; 11] {
         [
@@ -936,8 +937,8 @@ impl IntegrationScheme<3, 11> for Keast<11> {
     }
 }
 
-/// 三维参考立方体 `[-1, 1]³` 上的 2×2×2 高斯积分：一维 2 点 Gauss–Legendre
-/// 规则的张量积（权重之和等于参考立方体体积 `8`）。
+/// 2×2×2 Gauss integration on the 3D reference cube `[-1, 1]³`: tensor
+/// product of the 1D 2-point Gauss–Legendre rule (weights sum to the reference cube volume `8`).
 impl IntegrationScheme<3, 8> for TensorProductHex<2> {
     fn points() -> [[f64; 3]; 8] {
         [
@@ -965,8 +966,8 @@ impl IntegrationScheme<3, 8> for TensorProductHex<2> {
     }
 }
 
-/// 三维参考立方体 `[-1, 1]³` 上的 3×3×3 高斯积分：一维 3 点 Gauss–Legendre
-/// 规则的张量积（权重之和等于参考立方体体积 `8`）。
+/// 3×3×3 Gauss integration on the 3D reference cube `[-1, 1]³`: tensor
+/// product of the 1D 3-point Gauss–Legendre rule (weights sum to the reference cube volume `8`).
 impl IntegrationScheme<3, 27> for TensorProductHex<3> {
     fn points() -> [[f64; 3]; 27] {
         [
@@ -1044,8 +1045,8 @@ mod tests {
 
     #[test]
     fn gauss_1d_moments() {
-        // 对每一种点数 n = 1..=10，权重之和应为参考区间长度 2，
-        // 且 2 阶矩 ∫ξ²dξ = 2/3（n >= 2）。
+        // For each number of points n = 1..=10, the weights must sum to the
+        // reference interval length 2, and the 2nd moment ∫ξ²dξ = 2/3 (n >= 2).
         macro_rules! check {
             ($n:literal, $g:literal) => {{
                 let p = <GaussLegendre1D<$g> as IntegrationScheme<1, $g>>::points();
@@ -1083,7 +1084,7 @@ mod tests {
 
     #[test]
     fn triangle_all_sums() {
-        // 12 个 Dunavant 规则的权重之和都应等于参考三角形面积 1/2。
+        // The weights of all 12 Dunavant rules must sum to the reference triangle area 1/2.
         macro_rules! check {
             ($g:literal) => {{
                 let w = <Dunavant<$g> as IntegrationScheme<2, $g>>::weights();

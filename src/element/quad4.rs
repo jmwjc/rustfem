@@ -15,7 +15,7 @@ impl<const D: usize> Quad4<D> {
     }
 }
 
-// 四边形完全积分：2×2 张量积（4 点，3 阶）；减缩积分：1 点（形心）。
+// Quadrilateral full integration: 2×2 tensor product (4 points, degree 3); reduced integration: 1 point (centroid).
 impl<const D: usize> IntegrationScheme<2, 1> for Quad4<D> {
     fn points() -> [[f64; 2]; 1] {
         <TensorProductQuad<1> as IntegrationScheme<2, 1>>::points()
@@ -47,8 +47,8 @@ impl<const D: usize> Element<D, 2, 4> for Quad4<D> {
         ]
     }
 
-    /// 双线性形函数：节点 1、2、3、4 分别对应参考四边形顶点
-    /// `(-1, -1)`、`(1, -1)`、`(1, 1)`、`(-1, 1)`。
+    /// Bilinear shape functions: nodes 1, 2, 3, 4 correspond respectively to the reference
+    /// quadrilateral vertices `(-1, -1)`, `(1, -1)`, `(1, 1)`, `(-1, 1)`.
     fn shape(&self, parametric_coordinates: [f64; 2]) -> [f64; 4] {
         let ξ = parametric_coordinates[0];
         let η = parametric_coordinates[1];
@@ -60,10 +60,11 @@ impl<const D: usize> Element<D, 2, 4> for Quad4<D> {
         ]
     }
 
-    /// 对第一个参数坐标 `ξ` 的偏导 `∂N/∂ξ`。
+    /// Partial derivative with respect to the first parametric coordinate: `∂N/∂ξ`.
     ///
-    /// 注：`Element` 的该方法返回 `[f64; N]`，无法容纳二维单元的完整梯度；
-    /// 对 `η` 的偏导及物理梯度需结合 [`Self::jacobe_mat`] 另行求得。
+    /// Note: `Element`'s method returns `[f64; N]`, which cannot hold the full gradient
+    /// of a 2D element; the derivative with respect to `η` and the physical gradient
+    /// must be obtained separately, e.g. via [`Self::jacobe_mat`].
     fn derivative_shape(&self, parametric_coordinates: [f64; 2]) -> [f64; 4] {
         let η = parametric_coordinates[1];
         [

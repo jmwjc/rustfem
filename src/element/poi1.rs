@@ -20,7 +20,7 @@ impl<const D: usize> IntegrationScheme<0, 1> for Poi1<D> {
     }
 }
 
-// 点单元的完全积分与减缩积分相同：零维单点积分。
+// Full and reduced integration coincide for a point element: a single point in zero-dimensional space.
 impl<const D: usize> FullIntegration<0, 1> for Poi1<D> {}
 impl<const D: usize> ReducedIntegration<0, 1> for Poi1<D> {}
 
@@ -29,12 +29,12 @@ impl<const D: usize> Element<D, 0, 1> for Poi1<D> {
         [self.nodes.id]
     }
 
-    /// 点单元形函数恒为 1（零维参数空间无坐标）。
+    /// The shape function of a point element is identically 1 (the zero-dimensional parametric space has no coordinates).
     fn shape(&self, _parametric_coordinates: [f64; 0]) -> [f64; 1] {
         [1.0]
     }
 
-    /// 形函数为常数，导数为 0。
+    /// The shape function is constant, so its derivative is 0.
     fn derivative_shape(&self, _parametric_coordinates: [f64; 0]) -> [f64; 1] {
         [0.0]
     }
@@ -47,12 +47,12 @@ impl<const D: usize> Element<D, 0, 1> for Poi1<D> {
         self.nodes.coordinates
     }
 
-    /// 零维点单元无拉伸，雅可比恒为 1。
+    /// A zero-dimensional point element has no stretching, so the Jacobian is identically 1.
     fn jacobe(&self, _parametric_coordinates: [f64; 0]) -> f64 {
         1.0
     }
 
-    /// 零维参数空间到 D 维物理空间的雅可比矩阵为 `D × 0` 空矩阵。
+    /// The Jacobian matrix from the zero-dimensional parametric space to the D-dimensional physical space is an empty `D × 0` matrix.
     fn jacobe_mat(&self, _parametric_coordinates: [f64; 0]) -> [[f64; 0]; D] {
         std::array::from_fn(|_| [])
     }

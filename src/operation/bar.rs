@@ -5,11 +5,12 @@ use crate::operation::Variable;
 use crate::sparse_vector::Doublet;
 use faer::sparse::Triplet;
 
-/// 组装刚度矩阵，返回下三角（含对角线）的稀疏三元组。
+/// Assembles the stiffness matrix and returns sparse triplets for the lower
+/// triangle (including the diagonal).
 ///
-/// `ea` 为轴向刚度（杨氏模量 × 横截面积）。
-/// `v` 是一组 1D 单元（实现 [`Variable<1, P, N>`]），每个单元须实现
-/// [`FullIntegration<P, G>`]。
+/// `ea` is the axial stiffness (Young's modulus × cross-sectional area).
+/// `v` is a set of 1D elements (implementing [`Variable<1, P, N>`]); each
+/// element must implement [`FullIntegration<P, G>`].
 pub fn stiffness<T, const P: usize, const N: usize, const G: usize>(
     v: &T,
     ea: f64,
@@ -42,11 +43,14 @@ where
     triplets
 }
 
-/// 施加自然边界条件（集中力），采用点单元（[`crate::element::poi1::Poi1`]）表示作用点。
+/// Applies a natural boundary condition (concentrated force), using point
+/// elements ([`crate::element::poi1::Poi1`]) to represent the load points.
 ///
-/// `p` 为力值，`v` 为一组点单元（[`Variable<D, 0, 1>`]），每个点单元对应一个
-/// 作用点，在其上施加 `Fᵢ += Nᵢ P`。返回 [`Doublet`] 列表，调用方可用
-/// [`crate::sparse_vector::try_new_from_doublet`] 合并为载荷向量。
+/// `p` is the force magnitude and `v` is a set of point elements
+/// ([`Variable<D, 0, 1>`]); each point element corresponds to one load point,
+/// where `Fᵢ += Nᵢ P` is applied. Returns a list of [`Doublet`]s that the
+/// caller can merge into a load vector via
+/// [`crate::sparse_vector::try_new_from_doublet`].
 pub fn traction<T, const D: usize>(v: &T, p: f64) -> Vec<Doublet<usize, f64>>
 where
     T: Variable<D, 0, 1>,

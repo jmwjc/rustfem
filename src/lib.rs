@@ -1,13 +1,13 @@
-//! `rustfem` — 一个用 Rust 编写的有限元方法（FEM）库。
+//! `rustfem` — a finite element method (FEM) library written in Rust.
 //!
-//! 提供模块化的单元（Element）、材料/问题操作（Operation）与网格 I/O 接口。
+//! Provides modular interfaces for elements, material/problem operations, and mesh I/O.
 //!
-//! 主要模块：
+//! Main modules:
 //!
-//! - [`node`]：节点类型。
-//! - [`element`]：单元 trait（形函数、雅可比等）及具体单元（`Seg2`、`Tri3`、`Poi1`）。
-//! - [`operation`]：组装相关的抽象（`Variable` 及刚度、载荷、罚函数组装算子）。
-//! - [`io`]：网格文件读取（GMSH）。
+//! - [`node`]: node types.
+//! - [`element`]: the element trait (shape functions, Jacobian, etc.) and concrete elements (`Seg2`, `Tri3`, `Poi1`).
+//! - [`operation`]: assembly-related abstractions (`Variable` and the stiffness, load, and penalty assembly operators).
+//! - [`io`]: mesh file reading (GMSH).
 
 pub mod element;
 pub mod io;
